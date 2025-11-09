@@ -23,7 +23,7 @@ class Worker(Agent):
         self.type = AgentType.WORKER
         self.chore = chore
         self.work = work
-        self.weekend_chores = weekend_chores
+        self.weekend_chores = weekend_chores # This is a list of locations
 
         work_time_float = random.normalvariate(8, 1)
         work_duration_float = random.normalvariate(8, 1)
@@ -50,22 +50,84 @@ class Worker(Agent):
     def generate_day(self):
         actions = []
         if self.current_time.weekday() < 5:
+            # --- UPDATED WEEKDAY LOGIC ---
+            # Give the worker two different patterns to add variety.
 
             # Departure time with a random perturbation
             departure_time = (datetime.combine(date.today(), self.work_time) + timedelta(seconds=random.normalvariate(600,300))).time()
+            self.set_time_t(departure_time)
 
-            self.set_time_t(departure_time) #without randomness use self.set_time_t(self.work_time)
-            a1 = self.advance_step(self.work, self.work_duration)
-            a2 = self.advance_step(self.home, timedelta(0))
-            self.set_time_t(self.chore_time)
-            a3 = self.advance_step(self.chore, self.chore_duration)
-            a4 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a1, a2, a3, a4])
+            if random.random() < 0.5:
+                # Path A (50% chance): "Efficient"
+                # Home -> Work -> Chore (on the way home) -> Home
+                a1 = self.advance_step(self.work, self.work_duration)
+                a2 = self.advance_step(self.chore, self.chore_duration)
+                a3 = self.advance_step(self.home, timedelta(0))
+                actions.extend([a1, a2, a3])
+
+            else:
+                # Path B (50% chance): "Original Logic"
+                # Home -> Work -> Home (rest) -> Chore -> Home
+                a1 = self.advance_step(self.work, self.work_duration)
+                a2 = self.advance_step(self.home, timedelta(0))
+                self.set_time_t(self.chore_time) # Set time for later chore
+                a3 = self.advance_step(self.chore, self.chore_duration)
+                a4 = self.advance_step(self.home, timedelta(0))
+                actions.extend([a1, a2, a3, a4])
+
             self.end_day()
+
         else:
-            for i in range(len(self.weekend_chore_times)):
-                self.set_time_t(self.weekend_chore_times[i])
-                a = self.advance_step(self.weekend_chores[i], timedelta(0))
-                actions.append(a)
+            # --- UPDATED WEEKEND LOGIC ---
+            # Make weekend behavior more realistic.
+            # Instead of doing all chores, pick 1 or 2.
+            # Add realistic durations.
+            # Add trip chaining (e.g., Home -> Gym -> Grocery -> Home).
+
+            if not self.weekend_chores: # Skip if agent has no weekend chores
+                self.end_day()
+                return []
+
+            # Decide on 1 or 2 activities for the day
+            num_activities = random.randint(1, min(2, len(self.weekend_chores)))
+
+            # Get a random subset of activities and their times
+            zipped_list = list(zip(self.weekend_chore_times, self.weekend_chores))
+            random.shuffle(zipped_list)
+            todays_activities = sorted(zipped_list[:num_activities])
+
+            # 50% chance to chain trips (e.g., Home -> A -> B -> Home)
+            # 50% chance to do separate trips (e.g., Home -> A -> Home, Home -> B -> Home)
+            chain_trips = random.random() < 0.5 and num_activities > 1
+
+            if not chain_trips:
+                # --- Path 1: Separate Trips ---
+                for activity_time, activity_location in todays_activities:
+                    # Set departure time from home
+                    self.set_time_t(activity_time)
+                    # Stay for a random duration (45 min to 2 hours)
+                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+
+                    a1 = self.advance_step(activity_location, stay_duration)
+                    a2 = self.advance_step(self.home, timedelta(0)) # Go home after
+                    actions.extend([a1, a2])
+
+            else:
+                # --- Path 2: Chained Trips ---
+                # Start from home for the first activity
+                self.set_time_t(todays_activities[0][0])
+
+                for activity_time, activity_location in todays_activities:
+                    # Stay for a random duration (45 min to 2 hours)
+                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+
+                    # Go from current location (Home or last activity) to the next one
+                    a_activity = self.advance_step(activity_location, stay_duration)
+                    actions.append(a_activity)
+
+                # After the last activity, go home
+                a_home = self.advance_step(self.home, timedelta(0))
+                actions.append(a_home)
+
             self.end_day()
         return actions
