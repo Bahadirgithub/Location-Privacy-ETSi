@@ -1,8 +1,14 @@
+My apologies\! You are right, the file block didn't appear.
+
+Here is the complete, correct code for `agent_generation.py` that includes the new `Freelance` agent. You can paste this directly into your file.
+
+```python
 # coding: utf-8
 from model.Worker import Worker
 from model.PartTimeWorker import PartTimeWorker
 from model.NightWorker import NightWorker
-from model.Homestay import Homestay  # --- ADDED ---
+from model.Homestay import Homestay
+from model.Freelance import Freelance
 from utils import map_parser
 from model.Agent import *
 from model.District import *
@@ -32,50 +38,63 @@ def create_test_locations(map_path):
 # create and test agents
 def create_test_agents(number, locations):
     test_agents = []
-    # --- UPDATED ---
-    # Calculate the number of agents for each type based on percentages
+
+    # Calculate number of agents for each type
     number_of_homestay = int(number * homestay_percentage)
+    number_of_freelance = int(number * freelance_percentage)
     number_of_parttime_workers = int(number * parttime_percentage)
     number_of_nighttime_workers = int(number * nighttime_percentage)
-    # --- END UPDATED ---
+
+    # Pre-calculate start indices for each group
+    start_freelance = number_of_homestay
+    start_parttime = start_freelance + number_of_freelance
+    start_nighttime = start_parttime + number_of_parttime_workers
+    start_worker = start_nighttime + number_of_nighttime_workers
 
     for i in range(number):
-        # --- ADDED ---
-        # New block to create Homestay agents first
-        if i < number_of_homestay:
+        if i < start_freelance:
+            # --- Create Homestay ---
             test_agents.append(
-                Homestay('homestay_' + str(i),
+                Homestay('homestay' + str(i),
                          random.choice(home_district.locations),
                          random.choice(locations),  # school
                          random.choice(locations),  # grocery
                          random.choice(locations),  # activity
-                         np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))  # weekend_chores
-        # --- END ADDED ---
+                         np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
 
-        # --- UPDATED ---
-        # All subsequent conditions are shifted
-        elif i < number_of_homestay + number_of_parttime_workers:
+        elif i < start_parttime:
+            # --- Create Freelance ---
+            test_agents.append(
+                Freelance('freelance' + str(i),
+                          random.choice(home_district.locations),
+                          # Give them a list of leisure locations
+                          np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
+
+        elif i < start_nighttime:
+            # --- Create PartTimeWorker ---
             test_agents.append(
                 PartTimeWorker('pt_worker' + str(i),
                                random.choice(home_district.locations),
                                random.choice(work_district.locations),
                                np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-        elif i < number_of_homestay + number_of_parttime_workers + number_of_nighttime_workers:
+
+        elif i < start_worker:
+            # --- Create NightWorker ---
             test_agents.append(
                 NightWorker('n_worker' + str(i),
                             random.choice(home_district.locations),
                             random.choice(work_district.locations),
                             random.choice(locations),
                             np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
+
         else:
-            # The remainder are full-time Workers
+            # --- Create Worker (Full-Time) ---
             test_agents.append(
                 Worker('worker' + str(i),
                        random.choice(home_district.locations),
                        random.choice(work_district.locations),
                        random.choice(locations),
                        np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-        # --- END UPDATED ---
     return test_agents
 
 
@@ -148,10 +167,12 @@ def get_options():
     parser.add_argument('--inpath', dest='in_path', type=str, default='../rsc/traffic/', help='Relative path to resource file directory')
     parser.add_argument('--outpath', dest='out_path', type=str, default='../rsc/traffic/', help='Relative path to output directory')
     parser.add_argument('--agents', dest='number_of_agents', type=int, default=20, help='Number of agents')
-    parser.add_argument('--parttime', dest='parttime_percentage', type=int, default=0)
-    parser.add_argument('--nighttime', dest='nighttime_percentage', type=int, default=0)
+    parser.add_argument('--parttime', dest='parttime_percentage', type=int, default=10) # Default 10%
+    parser.add_argument('--nighttime', dest='nighttime_percentage', type=int, default=10) # Default 10%
+    parser.add_argument('--homestay', dest='homestay_percentage', type=int, default=15) # Default 15%
+    parser.add_argument('--freelance', dest='freelance_percentage', type=int, default=15) # Default 15%
     parser.add_argument('--days', dest='number_of_days', type=int, default=30, help='Number of days')
-    parser.add_address_map_output_name', type=str, default='map.xml')
+    parser.add_argument('--mapin', dest='map_input_name', type=str, default='map.xml')
     parser.add_argument('--routesout', dest='routes_output_name', type=str, default='routes.xml')
     parser.add_argument('--vehmapout', dest='vehicle_map_output_name', type=str, default='vehicle_map.csv')
     parser.add_argument('--homedistrict', dest='home_district', type=str, default='')
@@ -180,20 +201,18 @@ if __name__ == "__main__":
     rep_path = args.report_path
     rep_name = args.report_name
     number_of_agents = args.number_of_agents
-    parttime_percentage = args.parttime_percentage/100
-    nighttime_percentage = args.nighttime_percentage/100
 
-    # --- ADDED ---
-    # We will hardcode 20% of agents to be Homestay for now
-    # This means user-defined percentages for parttime and nighttime must be lower
-    homestay_percentage = 0.2
-    # --- END ADDED ---
+    # Get percentages and convert to float
+    parttime_percentage = args.parttime_percentage / 100.0
+    nighttime_percentage = args.nighttime_percentage / 100.0
+    homestay_percentage = args.homestay_percentage / 100.0
+    freelance_percentage = args.freelance_percentage / 100.0
 
-    # --- UPDATED ---
-    # Updated the error check to include the new homestay_percentage
-    if parttime_percentage + nighttime_percentage + homestay_percentage > 1:
-        raise ValueError("Invalid percentages of workers specified. PartTime + NightTime + 20% (Homestay) exceeds 100%.")
-    # --- END UPDATED ---
+    # Check that all percentages add up to max 1.0 (100%)
+    total_percentage = (parttime_percentage + nighttime_percentage +
+                        homestay_percentage + freelance_percentage)
+    if total_percentage > 1.0:
+        raise ValueError("Invalid percentages of workers specified. Total exceeds 100%.")
 
     number_of_days = args.number_of_days
     mapin = args.map_input_name
@@ -214,3 +233,4 @@ if __name__ == "__main__":
     # Write report except flag --no-report is set
     if args.report:
         report()
+```
