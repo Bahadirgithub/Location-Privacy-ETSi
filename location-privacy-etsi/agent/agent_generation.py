@@ -2,6 +2,7 @@
 from model.Worker import Worker
 from model.PartTimeWorker import PartTimeWorker
 from model.NightWorker import NightWorker
+from model.Homestay import Homestay  # --- ADDED ---
 from utils import map_parser
 from model.Agent import *
 from model.District import *
@@ -31,29 +32,50 @@ def create_test_locations(map_path):
 # create and test agents
 def create_test_agents(number, locations):
     test_agents = []
-    number_of_parttime_workers = int(number*parttime_percentage)
-    nummber_of_nighttime_workers = int(number*nighttime_percentage)
+    # --- UPDATED ---
+    # Calculate the number of agents for each type based on percentages
+    number_of_homestay = int(number * homestay_percentage)
+    number_of_parttime_workers = int(number * parttime_percentage)
+    number_of_nighttime_workers = int(number * nighttime_percentage)
+    # --- END UPDATED ---
+
     for i in range(number):
-        if i < number_of_parttime_workers:
+        # --- ADDED ---
+        # New block to create Homestay agents first
+        if i < number_of_homestay:
+            test_agents.append(
+                Homestay('homestay_' + str(i),
+                         random.choice(home_district.locations),
+                         random.choice(locations),  # school
+                         random.choice(locations),  # grocery
+                         random.choice(locations),  # activity
+                         np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))  # weekend_chores
+        # --- END ADDED ---
+
+        # --- UPDATED ---
+        # All subsequent conditions are shifted
+        elif i < number_of_homestay + number_of_parttime_workers:
             test_agents.append(
                 PartTimeWorker('pt_worker' + str(i),
                                random.choice(home_district.locations),
                                random.choice(work_district.locations),
                                np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-        elif i < number_of_parttime_workers + nummber_of_nighttime_workers:
+        elif i < number_of_homestay + number_of_parttime_workers + number_of_nighttime_workers:
             test_agents.append(
                 NightWorker('n_worker' + str(i),
-                       random.choice(home_district.locations),
-                       random.choice(work_district.locations),
-                       random.choice(locations),
-                       np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
+                            random.choice(home_district.locations),
+                            random.choice(work_district.locations),
+                            random.choice(locations),
+                            np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
         else:
+            # The remainder are full-time Workers
             test_agents.append(
                 Worker('worker' + str(i),
                        random.choice(home_district.locations),
                        random.choice(work_district.locations),
                        random.choice(locations),
                        np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
+        # --- END UPDATED ---
     return test_agents
 
 
@@ -71,7 +93,7 @@ def generate_demand_file(filename, agents, duration):
     root = etree.Element('routes')
     for a in agents:
         root.append(etree.Element('vType', id=a.id, accel='1.0', decel='5.0',
-                         length='5.0', maxSpeed='50.0', sigma='0.0'))
+                                  length='5.0', maxSpeed='50.0', sigma='0.0'))
     demand = generate_demand(agents, duration)
     for d in demand:
         # Cannot use the typical constructor etree.Element('trip',id=...) because the word from is a Python keyword which cannot be used outside of string declarations
@@ -129,7 +151,7 @@ def get_options():
     parser.add_argument('--parttime', dest='parttime_percentage', type=int, default=0)
     parser.add_argument('--nighttime', dest='nighttime_percentage', type=int, default=0)
     parser.add_argument('--days', dest='number_of_days', type=int, default=30, help='Number of days')
-    parser.add_argument('--mapin', dest='map_input_name', type=str, default='map.xml')
+    parser.add_address_map_output_name', type=str, default='map.xml')
     parser.add_argument('--routesout', dest='routes_output_name', type=str, default='routes.xml')
     parser.add_argument('--vehmapout', dest='vehicle_map_output_name', type=str, default='vehicle_map.csv')
     parser.add_argument('--homedistrict', dest='home_district', type=str, default='')
@@ -160,8 +182,19 @@ if __name__ == "__main__":
     number_of_agents = args.number_of_agents
     parttime_percentage = args.parttime_percentage/100
     nighttime_percentage = args.nighttime_percentage/100
-    if parttime_percentage + nighttime_percentage > 1:
-        raise ValueError("Invalid percentages of workers specified.")
+
+    # --- ADDED ---
+    # We will hardcode 20% of agents to be Homestay for now
+    # This means user-defined percentages for parttime and nighttime must be lower
+    homestay_percentage = 0.2
+    # --- END ADDED ---
+
+    # --- UPDATED ---
+    # Updated the error check to include the new homestay_percentage
+    if parttime_percentage + nighttime_percentage + homestay_percentage > 1:
+        raise ValueError("Invalid percentages of workers specified. PartTime + NightTime + 20% (Homestay) exceeds 100%.")
+    # --- END UPDATED ---
+
     number_of_days = args.number_of_days
     mapin = args.map_input_name
     routesout = args.routes_output_name
