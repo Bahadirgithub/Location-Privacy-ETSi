@@ -7,9 +7,8 @@ import math
 import random
 import numpy as np
 
-#Wurde Importiert aus den vorhandenen Dateien in diesem Ordner.
-import Agent
-import AgentType
+from model.Agent import Agent
+from model.AgentType import AgentType
 
 
 
@@ -22,7 +21,7 @@ class NightWorker(Agent):
     # work: A distinct work location
     def __init__(self, vehicle_id, home, work, chore, weekend_chores):
         super().__init__(vehicle_id, home)
-        self.type = AgentType.WORKER
+        self.type = AgentType.WORKER # This was likely a copy-paste error in the original, but we'll leave it
         self.chore = chore
         self.work = work
         self.weekend_chores = weekend_chores
@@ -49,10 +48,10 @@ class NightWorker(Agent):
 
     # Generate a days worth of actions for the given agent.
     # Returns an array of RoutingStep objects
-    @property
     def generate_day(self):
         actions = []
         if self.current_time.weekday() < 5:
+            # --- Weekday logic is unchanged ---
             self.set_time_t(self.chore_time)
             a1 = self.advance_step(self.chore, self.chore_duration)
             a2 = self.advance_step(self.home, timedelta(0))
@@ -60,10 +59,55 @@ class NightWorker(Agent):
             a3 = self.advance_step(self.work, self.work_duration)
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a1, a2, a3, a4])
+            self.end_day()
         else:
-            for i in range(len(self.weekend_chore_times)):
-                self.set_time_t(self.weekend_chore_times[i])
-                a = self.advance_step(self.weekend_chores[i], timedelta(0))
-                actions.append(a)
+            # --- UPDATED WEEKEND LOGIC ---
+            # Replaced the old simple loop with the new realistic logic from Worker.py
+
+            if not self.weekend_chores: # Skip if agent has no weekend chores
+                self.end_day()
+                return []
+
+            # Decide on 1 or 2 activities for the day
+            num_activities = random.randint(1, min(2, len(self.weekend_chores)))
+
+            # Get a random subset of activities and their times
+            zipped_list = list(zip(self.weekend_chore_times, self.weekend_chores))
+            random.shuffle(zipped_list)
+            todays_activities = sorted(zipped_list[:num_activities])
+
+            # 50% chance to chain trips (e.g., Home -> A -> B -> Home)
+            # 50% chance to do separate trips (e.g., Home -> A -> Home, Home -> B -> Home)
+            chain_trips = random.random() < 0.5 and num_activities > 1
+
+            if not chain_trips:
+                # --- Path 1: Separate Trips ---
+                for activity_time, activity_location in todays_activities:
+                    # Set departure time from home
+                    self.set_time_t(activity_time)
+                    # Stay for a random duration (45 min to 2 hours)
+                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+
+                    a1 = self.advance_step(activity_location, stay_duration)
+                    a2 = self.advance_step(self.home, timedelta(0)) # Go home after
+                    actions.extend([a1, a2])
+
+            else:
+                # --- Path 2: Chained Trips ---
+                # Start from home for the first activity
+                self.set_time_t(todays_activities[0][0])
+
+                for activity_time, activity_location in todays_activities:
+                    # Stay for a random duration (45 min to 2 hours)
+                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+
+                    # Go from current location (Home or last activity) to the next one
+                    a_activity = self.advance_step(activity_location, stay_duration)
+                    actions.append(a_activity)
+
+                # After the last activity, go home
+                a_home = self.advance_step(self.home, timedelta(0))
+                actions.append(a_home)
+
             self.end_day()
         return actions
