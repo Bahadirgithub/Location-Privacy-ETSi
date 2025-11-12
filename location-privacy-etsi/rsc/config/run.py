@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     # Empty report file
     report = config.get('report')
-    f = open('../reports/'s + report, 'w')
+    f = open('../reports/' + report, 'w')
 
     # Get outer tags 'simulation', 'attacker' and 'evaluation' from config file
     generation = config.get('generation')
