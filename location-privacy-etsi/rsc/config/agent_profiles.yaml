@@ -1,0 +1,123 @@
+# Dies ist die zentrale Konfigurationsdatei für alle Agenten-Parameter.
+# Sie ermöglicht die dynamische Konfiguration der Agenten-Erstellung,
+# wie vom Professor gefordert.
+
+# -------------------------------------------------------------------------
+# TEIL 1: Agenten-Verteilung (in Prozent)
+# -------------------------------------------------------------------------
+# Definiert den prozentualen Anteil der Agententypen.
+# Diese Werte basieren auf der realen Verteilung (Deine Recherche).
+# Der 'worker' (Vollzeit, 55%) wird automatisch als der verbleibende Rest
+# bis 100% berechnet, was den Code robuster macht.
+# -------------------------------------------------------------------------
+agent_distribution:
+  # Deine neuen realistischen Werte:
+  parttimeworker: 18
+  nightworker: 7
+  homestay: 8
+  freelance: 12
+  # worker (fulltime) = 100 - (18 + 7 + 8 + 12) = 55%
+
+# -------------------------------------------------------------------------
+# TEIL 2: Agenten-Profile (Parameter & Verteilungen)
+# -------------------------------------------------------------------------
+# Definiert die "magischen Zahlen" (statistischen Parameter) für jeden Agententyp.
+# 'mean' = Mittelwert (z.B. 8.0 für 8:00 Uhr)
+# 'std_dev' = Standardabweichung (z.B. 1.0 für +/- 1 Stunde)
+# 'prob' = Wahrscheinlichkeit (z.B. 0.5 für 50%)
+# HINWEIS: Die Schlüssel (z.B. 'work_start') sind auf Englisch,
+# damit wir sie im Python-Code konsistent als variablen verwenden können.
+# -------------------------------------------------------------------------
+agent_profiles:
+
+  worker:
+    work_start:
+      mean: 8.0
+      std_dev: 1.0
+    work_duration:
+      mean: 8.0
+      std_dev: 1.0
+    weekday_chore:
+      start_min: 17.0 # Früheste Zeit nach der Arbeit (8+8+1 Puffer)
+      start_max: 22.0
+      duration_min: 0.5
+      duration_max: 1.5
+    weekday_chore_on_way_home_prob: 0.5 # 50% Chance für 'effizienten' Weg
+    weekend:
+      num_activities_min: 1
+      num_activities_max: 2
+      stay_duration_min: 0.75
+      stay_duration_max: 2.0
+      chain_trips_prob: 0.5
+
+  parttimeworker:
+    # Arbeitet an zufälligen Tagen (Logik in Python), aber mit diesen Zeiten
+    work_start:
+      mean: 10.0
+      std_dev: 2.0
+    work_duration:
+      mean: 4.0  # Weniger als Vollzeit
+      std_dev: 1.0
+    work_days_choices: [1, 2, 3, 4] # Mögliche Anzahl an Arbeitstagen
+    # Parameter für freie Tage (Logik wie bei worker weekend)
+    day_off:
+      num_activities_min: 1
+      num_activities_max: 2
+      stay_duration_min: 0.75
+      stay_duration_max: 2.0
+      chain_trips_prob: 0.5
+
+  nightworker:
+    work_start:
+      mean: 18.0
+      std_dev: 2.0
+    work_duration:
+      mean: 8.0
+      std_dev: 1.0
+    # Erledigung vor der Arbeit
+    weekday_chore:
+      start_min: 9.0
+      start_max: 16.0
+      duration_min: 0.5
+      duration_max: 1.5
+    # Wochenende (Logik wie bei worker)
+    weekend:
+      num_activities_min: 1
+      num_activities_max: 2
+      stay_duration_min: 0.75
+      stay_duration_max: 2.0
+      chain_trips_prob: 0.5
+
+  homestay:
+    school_dropoff:
+      mean: 8.5
+      std_dev: 0.25
+    school_pickup:
+      mean: 15.5
+      std_dev: 0.25
+    grocery_duration:
+      mean: 0.75
+      std_dev: 0.2
+    activity_duration:
+      mean: 1.5
+      std_dev: 0.25
+    # Wochenende (Logik wie bei worker)
+    weekend:
+      num_activities_min: 1
+      num_activities_max: 2
+      stay_duration_min: 0.75
+      stay_duration_max: 2.0
+      chain_trips_prob: 0.5
+
+  freelance:
+    stay_home_prob: 0.4 # 40% Chance, zu Hause zu bleiben
+    # An aktiven Tagen
+    activity:
+      num_activities_min: 1
+      num_activities_max: 2
+      stay_duration_min: 0.5
+      stay_duration_max: 1.5
+      chain_trips_prob: 0.5
+      # Zeitfenster für Aktivitäten
+      time_min: 9.0
+      time_max: 20.0

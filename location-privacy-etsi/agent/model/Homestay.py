@@ -18,32 +18,48 @@ class Homestay(Agent):
     # grocery: A distinct grocery store location
     # activity: A distinct location for after-school activities (e.g., sports)
     # weekend_chores: A list of locations for weekend chores
-    def __init__(self, vehicle_id, home, school, grocery, activity, weekend_chores):
+    # config: Das Konfigurations-Profil aus der YAML-Datei
+    def __init__(self, vehicle_id, home, school, grocery, activity, weekend_chores, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.HOMESTAY
         self.school = school
         self.grocery = grocery
         self.activity = activity
         self.weekend_chores = weekend_chores
+        self.config = config # Speichert die Konfiguration
 
         # --- Define Weekday Times ---
+        # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
 
-        # Morning school drop-off time (e.g., 8:30 AM +/- 15 min)
-        school_dropoff_float = random.normalvariate(8.5, 0.25)
+        # Morning school drop-off time (z.B. 8:30 AM +/- 15 min)
+        school_dropoff_float = random.normalvariate(
+            config['school_dropoff']['mean'],
+            config['school_dropoff']['std_dev']
+        )
         self.school_dropoff_time = self.time_from_float(school_dropoff_float)
 
-        # Afternoon school pick-up time (e.g., 3:30 PM +/- 15 min)
-        school_pickup_float = random.normalvariate(15.5, 0.25)
+        # Afternoon school pick-up time (z.B. 3:30 PM +/- 15 min)
+        school_pickup_float = random.normalvariate(
+            config['school_pickup']['mean'],
+            config['school_pickup']['std_dev']
+        )
         self.school_pickup_time = self.time_from_float(school_pickup_float)
 
         # --- Define Weekday Durations ---
+        # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
 
-        # Grocery trip duration (e.g., 45 min +/- 12 min)
-        grocery_duration_float = random.normalvariate(0.75, 0.2)
+        # Grocery trip duration (z.B. 45 min +/- 12 min)
+        grocery_duration_float = random.normalvariate(
+            config['grocery_duration']['mean'],
+            config['grocery_duration']['std_dev']
+        )
         self.grocery_duration = self.timedelta_from_float(grocery_duration_float)
 
-        # Activity duration (e.g., 90 min +/- 15 min)
-        activity_duration_float = random.normalvariate(1.5, 0.25)
+        # Activity duration (z.B. 90 min +/- 15 min)
+        activity_duration_float = random.normalvariate(
+            config['activity_duration']['mean'],
+            config['activity_duration']['std_dev']
+        )
         self.activity_duration = self.timedelta_from_float(activity_duration_float)
 
 
@@ -67,6 +83,7 @@ class Homestay(Agent):
         if self.current_time.weekday() < 5:  # Weekday
 
             # --- Morning Trip Chain (School Drop-off + Groceries) ---
+            # (Diese Logik verwendet die in __init__ dynamisch gesetzten Zeiten)
 
             # Add small randomness to departure time
             departure_time_am = (datetime.combine(date.today(), self.school_dropoff_time)
@@ -83,6 +100,7 @@ class Homestay(Agent):
             a3 = self.advance_step(self.home, timedelta(0))
 
             # --- Afternoon Trip Chain (School Pickup + Activity) ---
+            # (Diese Logik verwendet die in __init__ dynamisch gesetzten Zeiten)
 
             # Add small randomness to departure time
             departure_time_pm = (datetime.combine(date.today(), self.school_pickup_time)
@@ -102,18 +120,56 @@ class Homestay(Agent):
             self.end_day()
 
         else:  # Weekend
-            # Generate weekend chores just like the Worker agent
-            for i in range(len(self.weekend_chore_times)):
-                self.set_time_t(self.weekend_chore_times[i])
-                # Stay duration is 0, assuming they go home after (or to the next chore)
-                # To be more realistic, we could add a random duration
-                a = self.advance_step(self.weekend_chores[i], timedelta(hours=random.uniform(0.5, 1.5)))
-                actions.append(a)
+            # --- UPDATED WEEKEND LOGIC ---
+            # Verwendet jetzt Konfigurationswerte
 
-            # Always return home at the end of the day
-            if self.current_location != self.home:
-                a_home = self.advance_step(self.home, timedelta(0))
-                actions.append(a_home)
+            if not self.weekend_chores: # Skip if agent has no weekend chores
+                self.end_day()
+                return []
+
+            # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+            num_activities = random.randint(
+                self.config['weekend']['num_activities_min'],
+                min(self.config['weekend']['num_activities_max'], len(self.weekend_chores))
+            )
+
+            # Get a random subset of activities and their times
+            zipped_list = list(zip(self.weekend_chore_times, self.weekend_chores))
+            random.shuffle(zipped_list)
+            todays_activities = sorted(zipped_list[:num_activities])
+
+            # --- NEU: Verwende Konfigurationswert statt fester Zahl ---
+            chain_trips = random.random() < self.config['weekend']['chain_trips_prob'] and num_activities > 1
+
+            if not chain_trips:
+                # --- Path 1: Separate Trips ---
+                for activity_time, activity_location in todays_activities:
+                    self.set_time_t(activity_time)
+                    # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                    stay_duration = self.timedelta_from_float(random.uniform(
+                        self.config['weekend']['stay_duration_min'],
+                        self.config['weekend']['stay_duration_max']
+                    ))
+                    a = self.advance_step(activity_location, stay_duration)
+                    a_home = self.advance_step(self.home, timedelta(0))
+                    actions.extend([a, a_home])
+
+            else:
+                # --- Path 2: Chained Trips ---
+                self.set_time_t(todays_activities[0][0]) # Start time for first activity
+                for activity_time, activity_location in todays_activities:
+                    # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                    stay_duration = self.timedelta_from_float(random.uniform(
+                        self.config['weekend']['stay_duration_min'],
+                        self.config['weekend']['stay_duration_max']
+                    ))
+                    a = self.advance_step(activity_location, stay_duration)
+                    actions.append(a)
+
+                # Always return home at the end of the day
+                if self.current_location != self.home:
+                    a_home = self.advance_step(self.home, timedelta(0))
+                    actions.append(a_home)
 
             self.end_day()
 

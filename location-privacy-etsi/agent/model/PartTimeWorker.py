@@ -17,17 +17,31 @@ class PartTimeWorker(Agent):
     # home: A distinct home location
     # chore: chore that is done during the week and on the weekend
     # work: A distinct work location
-    def __init__(self, vehicle_id, home, work, chores):
+    # config: Das Konfigurations-Profil aus der YAML-Datei
+    def __init__(self, vehicle_id, home, work, chores, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.PART_TIME
         self.chores = chores # This is a list of chore locations
         self.work = work
+        self.config = config # Speichert die Konfiguration
 
-        self.work_time = self.time_from_float(random.normalvariate(10, 2))
-        self.work_duration = self.timedelta_from_float(random.normalvariate(8, 1))
+        # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+        self.work_time = self.time_from_float(random.normalvariate(
+            config['work_start']['mean'],
+            config['work_start']['std_dev']
+        ))
+        self.work_duration = self.timedelta_from_float(random.normalvariate(
+            config['work_duration']['mean'],
+            config['work_duration']['std_dev']
+        ))
 
-        # Parttime worker works for rather 1, 2, 3 or 4 random days (Mon-Fri)
-        self.work_days = np.random.choice(range(5), np.random.choice([1,2,3,4]), replace=False)
+        # Parttime worker works for random days
+        # --- NEU: Verwende Konfigurationswert statt fester Liste ---
+        self.work_days = np.random.choice(
+            range(5),
+            np.random.choice(config['work_days_choices']),
+            replace=False
+        )
 
         # chore_days are all days (Mon-Sun) that are NOT work days
         self.chore_days = np.setdiff1d(range(7), self.work_days)
@@ -50,7 +64,7 @@ class PartTimeWorker(Agent):
     def generate_day(self):
         actions = []
         if self.current_time.weekday() in self.work_days:
-            # --- This is a WORK day ---
+            # --- This is a WORK day (Logik unverändert) ---
             departure_time = (datetime.combine(date.today(), self.work_time) + timedelta(seconds=random.normalvariate(600,300))).time()
             self.set_time_t(departure_time)
             a1 = self.advance_step(self.work, self.work_duration)
@@ -60,32 +74,36 @@ class PartTimeWorker(Agent):
 
         elif self.current_time.weekday() in self.chore_days:
             # --- UPDATED "DAY OFF" LOGIC ---
-            # This logic now runs on any day that is not a work day (weekdays or weekends)
-            # We use the realistic "trip chaining" logic from Worker.py
+            # Verwendet jetzt Konfigurationswerte
 
             if not self.chores: # Skip if agent has no chores
                 self.end_day()
                 return []
 
-            # Decide on 1 or 2 activities for the day
-            num_activities = random.randint(1, min(2, len(self.chores)))
+            # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+            num_activities = random.randint(
+                self.config['day_off']['num_activities_min'],
+                min(self.config['day_off']['num_activities_max'], len(self.chores))
+            )
 
             # Get a random subset of activities and their times
             zipped_list = list(zip(self.chore_times, self.chores))
             random.shuffle(zipped_list)
             todays_activities = sorted(zipped_list[:num_activities])
 
-            # 50% chance to chain trips (e.g., Home -> A -> B -> Home)
-            # 50% chance to do separate trips (e.g., Home -> A -> Home, Home -> B -> Home)
-            chain_trips = random.random() < 0.5 and num_activities > 1
+            # --- NEU: Verwende Konfigurationswert statt fester Zahl ---
+            chain_trips = random.random() < self.config['day_off']['chain_trips_prob'] and num_activities > 1
 
             if not chain_trips:
                 # --- Path 1: Separate Trips ---
                 for activity_time, activity_location in todays_activities:
                     # Set departure time from home
                     self.set_time_t(activity_time)
-                    # Stay for a random duration (45 min to 2 hours)
-                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+                    # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                    stay_duration = self.timedelta_from_float(random.uniform(
+                        self.config['day_off']['stay_duration_min'],
+                        self.config['day_off']['stay_duration_max']
+                    ))
 
                     a1 = self.advance_step(activity_location, stay_duration)
                     a2 = self.advance_step(self.home, timedelta(0)) # Go home after
@@ -97,8 +115,11 @@ class PartTimeWorker(Agent):
                 self.set_time_t(todays_activities[0][0])
 
                 for activity_time, activity_location in todays_activities:
-                    # Stay for a random duration (45 min to 2 hours)
-                    stay_duration = self.timedelta_from_float(random.uniform(0.75, 2.0))
+                    # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                    stay_duration = self.timedelta_from_float(random.uniform(
+                        self.config['day_off']['stay_duration_min'],
+                        self.config['day_off']['stay_duration_max']
+                    ))
 
                     # Go from current location (Home or last activity) to the next one
                     a_activity = self.advance_step(activity_location, stay_duration)

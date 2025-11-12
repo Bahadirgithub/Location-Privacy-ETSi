@@ -15,16 +15,19 @@ class Freelance(Agent):
     # id: A vehicle ID
     # home: A distinct home location
     # leisure_locations: A list of locations for leisure (e.g., coffee, gym, park)
-    def __init__(self, vehicle_id, home, leisure_locations):
+    # config: Das Konfigurations-Profil aus der YAML-Datei
+    def __init__(self, vehicle_id, home, leisure_locations, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.FREELANCE
         self.leisure_locations = leisure_locations
+        self.config = config # Speichert die Konfiguration
         self.leisure_times = []
 
         # Generate some potential "activity times" for the whole simulation
         # These will be randomly chosen from.
-        prev_time = 9  # Start at 9 AM
-        max_time = 20  # End at 8 PM
+        # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+        prev_time = config['activity']['time_min']  # z.B. 9 AM
+        max_time = config['activity']['time_max']   # z.B. 8 PM
 
         if not leisure_locations:
             return
@@ -52,13 +55,17 @@ class Freelance(Agent):
         actions = []
 
         # --- KEY BEHAVIOR: 40% chance of staying home all day ---
-        # Also check if agent has any locations/times to go to
-        if random.random() < 0.4 or not self.leisure_locations or not self.leisure_times:
+        # --- NEU: Verwende Konfigurationswert statt fester Zahl ---
+        if random.random() < self.config['stay_home_prob'] or not self.leisure_locations or not self.leisure_times:
             self.end_day()
             return []
 
         # Decide on 1 or 2 activities for the day
-        num_activities = random.randint(1, min(2, len(self.leisure_locations), len(self.leisure_times)))
+        # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+        num_activities = random.randint(
+            self.config['activity']['num_activities_min'],
+            min(self.config['activity']['num_activities_max'], len(self.leisure_locations), len(self.leisure_times))
+        )
 
         # Get a random subset of activities and their times
         zipped_list = list(zip(self.leisure_times, self.leisure_locations))
@@ -66,14 +73,18 @@ class Freelance(Agent):
         todays_activities = sorted(zipped_list[:num_activities])
 
         # Use the same trip-chaining logic as other agents
-        chain_trips = random.random() < 0.5 and num_activities > 1
+        # --- NEU: Verwende Konfigurationswert statt fester Zahl ---
+        chain_trips = random.random() < self.config['activity']['chain_trips_prob'] and num_activities > 1
 
         if not chain_trips:
             # --- Path 1: Separate Trips ---
             for activity_time, activity_location in todays_activities:
                 self.set_time_t(activity_time)
-                # Shorter duration for freelance trips: 30-90 min
-                stay_duration = self.timedelta_from_float(random.uniform(0.5, 1.5))
+                # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                stay_duration = self.timedelta_from_float(random.uniform(
+                    self.config['activity']['stay_duration_min'],
+                    self.config['activity']['stay_duration_max']
+                ))
 
                 a1 = self.advance_step(activity_location, stay_duration)
                 a2 = self.advance_step(self.home, timedelta(0))
@@ -84,8 +95,11 @@ class Freelance(Agent):
             self.set_time_t(todays_activities[0][0])
 
             for activity_time, activity_location in todays_activities:
-                # Shorter duration for freelance trips: 30-90 min
-                stay_duration = self.timedelta_from_float(random.uniform(0.5, 1.5))
+                # --- NEU: Verwende Konfigurationswerte statt fester Zahlen ---
+                stay_duration = self.timedelta_from_float(random.uniform(
+                    self.config['activity']['stay_duration_min'],
+                    self.config['activity']['stay_duration_max']
+                ))
 
                 a_activity = self.advance_step(activity_location, stay_duration)
                 actions.append(a_activity)

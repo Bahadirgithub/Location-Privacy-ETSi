@@ -1,8 +1,3 @@
-My apologies\! You are right, the file block didn't appear.
-
-Here is the complete, correct code for `agent_generation.py` that includes the new `Freelance` agent. You can paste this directly into your file.
-
-```python
 # coding: utf-8
 from model.Worker import Worker
 from model.PartTimeWorker import PartTimeWorker
@@ -19,7 +14,12 @@ import argparse
 import sys
 import time
 import numpy as np
+import yaml  # Importiert yaml, um Konfigurationsdateien zu lesen
 from datetime import datetime
+
+
+# Globale Variable für die geladene Konfiguration
+agent_config = None
 
 
 # Parse map and create locations from edges
@@ -36,65 +36,83 @@ def create_test_locations(map_path):
 
 
 # create and test agents
-def create_test_agents(number, locations):
+# Diese Funktion nimmt jetzt die geladenen Profile und Prozentsätze entgegen
+def create_test_agents(number, locations, profiles, percentages):
     test_agents = []
 
-    # Calculate number of agents for each type
-    number_of_homestay = int(number * homestay_percentage)
-    number_of_freelance = int(number * freelance_percentage)
-    number_of_parttime_workers = int(number * parttime_percentage)
-    number_of_nighttime_workers = int(number * nighttime_percentage)
+    # Berechne die genaue Anzahl für jeden Typ basierend auf den Prozentzahlen
+    number_of_parttime = int(number * percentages['parttimeworker'])
+    number_of_nightworker = int(number * percentages['nightworker'])
+    number_of_homestay = int(number * percentages['homestay'])
+    number_of_freelance = int(number * percentages['freelance'])
+    # Der Rest sind Worker
+    number_of_worker = number - (number_of_parttime + number_of_nightworker + number_of_homestay + number_of_freelance)
 
-    # Pre-calculate start indices for each group
-    start_freelance = number_of_homestay
-    start_parttime = start_freelance + number_of_freelance
-    start_nighttime = start_parttime + number_of_parttime_workers
-    start_worker = start_nighttime + number_of_nighttime_workers
+    # Berechne die Start-Indizes für eine saubere Zuweisung
+    start_parttime = 0
+    start_nightworker = start_parttime + number_of_parttime
+    start_homestay = start_nightworker + number_of_nightworker
+    start_freelance = start_homestay + number_of_homestay
+    start_worker = start_freelance + number_of_freelance
+
+    # Debug-Ausgabe, um die Verteilung zu prüfen (kann später entfernt werden)
+    print(f"Agenten-Verteilung wird erstellt:")
+    print(f"  PartTimeWorker: {number_of_parttime}")
+    print(f"  NightWorker:    {number_of_nightworker}")
+    print(f"  Homestay:       {number_of_homestay}")
+    print(f"  Freelance:      {number_of_freelance}")
+    print(f"  Worker:         {number_of_worker}")
+    print(f"  GESAMT:         {number}")
 
     for i in range(number):
-        if i < start_freelance:
-            # --- Create Homestay ---
+        if i < start_nightworker:
+            # --- Erstelle PartTimeWorker ---
+            test_agents.append(
+                PartTimeWorker('pt_worker' + str(i),
+                               random.choice(home_district.locations),
+                               random.choice(work_district.locations),
+                               np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                               profiles['parttimeworker']  # Übergibt das Konfigurations-Profil
+                               ))
+        elif i < start_homestay:
+            # --- Erstelle NightWorker ---
+            test_agents.append(
+                NightWorker('n_worker' + str(i),
+                            random.choice(home_district.locations),
+                            random.choice(work_district.locations),
+                            random.choice(locations),
+                            np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                            profiles['nightworker']  # Übergibt das Konfigurations-Profil
+                            ))
+        elif i < start_freelance:
+            # --- Erstelle Homestay ---
             test_agents.append(
                 Homestay('homestay' + str(i),
                          random.choice(home_district.locations),
                          random.choice(locations),  # school
                          random.choice(locations),  # grocery
                          random.choice(locations),  # activity
-                         np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-
-        elif i < start_parttime:
-            # --- Create Freelance ---
+                         np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                         profiles['homestay']  # Übergibt das Konfigurations-Profil
+                         ))
+        elif i < start_worker:
+            # --- Erstelle Freelance ---
             test_agents.append(
                 Freelance('freelance' + str(i),
                           random.choice(home_district.locations),
-                          # Give them a list of leisure locations
-                          np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-
-        elif i < start_nighttime:
-            # --- Create PartTimeWorker ---
-            test_agents.append(
-                PartTimeWorker('pt_worker' + str(i),
-                               random.choice(home_district.locations),
-                               random.choice(work_district.locations),
-                               np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-
-        elif i < start_worker:
-            # --- Create NightWorker ---
-            test_agents.append(
-                NightWorker('n_worker' + str(i),
-                            random.choice(home_district.locations),
-                            random.choice(work_district.locations),
-                            random.choice(locations),
-                            np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
-
+                          np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                          profiles['freelance']  # Übergibt das Konfigurations-Profil
+                          ))
         else:
-            # --- Create Worker (Full-Time) ---
+            # --- Erstelle Worker (Full-Time) ---
             test_agents.append(
                 Worker('worker' + str(i),
                        random.choice(home_district.locations),
                        random.choice(work_district.locations),
                        random.choice(locations),
-                       np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False)))
+                       np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                       profiles['worker']  # Übergibt das Konfigurations-Profil
+                       ))
     return test_agents
 
 
@@ -131,7 +149,13 @@ def generate_demand_file(filename, agents, duration):
 # run script for demand generation
 def generate():
     test_locations = create_test_locations(in_path + mapin)
-    test_agents = create_test_agents(number_of_agents, test_locations)
+
+    # Übergibt die geladenen Profile und Prozentsätze an die Erstellungs-Funktion
+    test_agents = create_test_agents(number_of_agents,
+                                     test_locations,
+                                     agent_config['agent_profiles'],
+                                     agent_config['agent_distribution'])
+
     generate_demand_file(out_path + routesout, test_agents, number_of_days)
     veh_map_path = out_path + vehmapout
     with open(veh_map_path, 'w', newline='') as veh_map_file:
@@ -152,8 +176,14 @@ def report():
     f.write('Evaluation started at        ' + str(rep_start) +'\n')
     f.write('Evaluation ended at          ' + str(rep_end) +'\n')
     f.write('Runtime:                     ' + str(time1 - time0) + '\n\n')
+    f.write('Agent Config File:   ' + str(args.agent_config_path) + '\n') # Zeigt an, welche Konfig verwendet wurde
     f.write('Map used:            ' + str(mapin) + '\n\n')
     f.write('Number of agents:    ' + str(number_of_agents) + '\n')
+    # Hier könnten wir die Verteilung aus der Config ins Log schreiben
+    f.write('Agent Distribution:\n')
+    for key, value in agent_config['agent_distribution'].items():
+        f.write(f'  {key}: {value}%\n')
+
     f.write('Number of days:      ' + str(number_of_days) + '\n\n')
     f.write('Routing written to       ' + str(out_path + routesout) + '\n')
     f.write('Vehicle map written to   ' + str(in_path + vehmapout) + '\n\n')
@@ -167,10 +197,18 @@ def get_options():
     parser.add_argument('--inpath', dest='in_path', type=str, default='../rsc/traffic/', help='Relative path to resource file directory')
     parser.add_argument('--outpath', dest='out_path', type=str, default='../rsc/traffic/', help='Relative path to output directory')
     parser.add_argument('--agents', dest='number_of_agents', type=int, default=20, help='Number of agents')
-    parser.add_argument('--parttime', dest='parttime_percentage', type=int, default=10) # Default 10%
-    parser.add_argument('--nighttime', dest='nighttime_percentage', type=int, default=10) # Default 10%
-    parser.add_argument('--homestay', dest='homestay_percentage', type=int, default=15) # Default 15%
-    parser.add_argument('--freelance', dest='freelance_percentage', type=int, default=15) # Default 15%
+
+    # --- ENTFERNTE ARGUMENTE ---
+    # Die Prozent-Argumente werden entfernt, da sie jetzt aus der YAML-Datei kommen
+    # parser.add_argument('--parttime', dest='parttime_percentage', type=int, default=10)
+    # parser.add_argument('--nighttime', dest='nighttime_percentage', type=int, default=10)
+    # parser.add_argument('--homestay', dest='homestay_percentage', type=int, default=15)
+    # parser.add_argument('--freelance', dest='freelance_percentage', type=int, default=15)
+
+    # --- NEUES ARGUMENT ---
+    # Fügt ein Argument hinzu, um den Pfad zur neuen YAML-Konfigurationsdatei anzugeben
+    parser.add_argument('--agentconfig', dest='agent_config_path', type=str, default='../rsc/config/agent_profiles.yaml', help='Path to agent profiles config YAML file')
+
     parser.add_argument('--days', dest='number_of_days', type=int, default=30, help='Number of days')
     parser.add_argument('--mapin', dest='map_input_name', type=str, default='map.xml')
     parser.add_argument('--routesout', dest='routes_output_name', type=str, default='routes.xml')
@@ -202,17 +240,35 @@ if __name__ == "__main__":
     rep_name = args.report_name
     number_of_agents = args.number_of_agents
 
-    # Get percentages and convert to float
-    parttime_percentage = args.parttime_percentage / 100.0
-    nighttime_percentage = args.nighttime_percentage / 100.0
-    homestay_percentage = args.homestay_percentage / 100.0
-    freelance_percentage = args.freelance_percentage / 100.0
+    # --- NEUE LOGIK ZUM LADEN DER KONFIGURATION ---
+    # Lade die Agenten-Konfigurationsdatei
+    try:
+        with open(args.agent_config_path, 'r') as f:
+            agent_config = yaml.safe_load(f)
+    except FileNotFoundError:
+        print(f"FATAL ERROR: Agent config file not found at: {args.agent_config_path}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"FATAL ERROR: Could not parse YAML file: {e}")
+        sys.exit(1)
 
-    # Check that all percentages add up to max 1.0 (100%)
-    total_percentage = (parttime_percentage + nighttime_percentage +
-                        homestay_percentage + freelance_percentage)
-    if total_percentage > 1.0:
-        raise ValueError("Invalid percentages of workers specified. Total exceeds 100%.")
+    # Berechne die Prozent-Summe der spezialisierten Agenten
+    specialized_percentage_sum = 0
+    for agent_type, percentage in agent_config['agent_distribution'].items():
+        agent_config['agent_distribution'][agent_type] = percentage / 100.0
+        specialized_percentage_sum += percentage / 100.0
+
+    if specialized_percentage_sum > 1.0:
+        raise ValueError("Invalid percentages in YAML. Total of specialized agents exceeds 100%.")
+
+    # Füge den 'worker' als den verbleibenden Rest hinzu (z.B. 1.0 - 0.45 = 0.55)
+    # Das entspricht deinen 55%
+    agent_config['agent_distribution']['worker'] = 1.0 - specialized_percentage_sum
+
+    # --- ENTFERNTE LOGIK ---
+    # Die alten Prozent-Berechnungen werden entfernt
+    # parttime_percentage = args.parttime_percentage / 100.0
+    # ...
 
     number_of_days = args.number_of_days
     mapin = args.map_input_name
@@ -233,4 +289,3 @@ if __name__ == "__main__":
     # Write report except flag --no-report is set
     if args.report:
         report()
-```
