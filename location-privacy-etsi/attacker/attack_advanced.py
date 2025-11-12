@@ -512,7 +512,7 @@ def get_options():
     parser.add_argument('-o', '--output', dest='output_file_name', type=str, help='Set output xml file name', default='attacker_advanced.xml')
     parser.add_argument('-r', '--report', dest='report_name', type=str, help='Set report name', default='report.txt')
     parser.add_argument('-t', '--simulatedTimes', dest='simulated_times_input_file_name', type=str, help='Specify knowlege for the attacker with traveltimes', default='simulated-times.xml')
-    parser.add_argument('-n', '--simulatedAnnealing', dest='simulatedAnnealing', type=int, help='Number of interations', default='2')
+    parser.add_argument('-n', '--simulatedAnnealing', dest='simulatedAnnealing', type=int, help='Number of interations', default=2)
     return parser.parse_args()
 
 # Write report file
