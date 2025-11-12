@@ -5,6 +5,7 @@ import sys
 import time
 import networkx as nx
 import xml.etree.ElementTree as ET
+import numpy as np
 import random
 from copy import copy
 from tqdm import tqdm
@@ -21,11 +22,6 @@ class Trip:
     self.trip = trip #String with all Edges
     self.used = used    #int list with all ids that are used in this trip
     self.deltaSum = deltaSum    # the deviation from the avg. times from every edge in this trip
-
-
-   
-
-
 
 
 #generates a graph with connected detectors (nodes are the detectors).
@@ -223,9 +219,47 @@ def findTrips():
     #sort results. worst deltaSum first     
     results.sort(key = lambda c: c.deltaSum, reverse=True)
     
+# Genetische Funktion:
 
+#Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
+# -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
- 
+#Erste Test Parameter
+POPULATION_SIZE = 10 #Für Testzwecke sonst eher 100+
+GENOME_LENGHT = 20 #Anzahl der sets
+MUTATION_RATE = 0.01
+CROSSOVER_RATE = 0.01
+
+def create_individual(num_trips, num_wallets): #Eine Lösungsmenge= Individum / Genom
+    genome = []
+    for _ in range(num_trips):
+        #Zufällige Zuordnung
+        wallet_id = random.randint(0, num_wallets - 1)
+        genome.append(wallet_id)
+    return genome
+
+def initial_population(num_trips, num_wallets):
+    population = []
+
+    #Erzeuge erste Generation
+    for _ in range(POPULATION_SIZE):
+        individual = create_individual(num_trips, num_wallets)
+        population.append(individual)
+
+    return population
+
+#TO DO: Fitnessfunktion muss implementiert werden!!!
+
+#Herausforderung: Fitnessfunktion muss einer gesamten Zuweisung eine Zahl (Score) geben
+def fitness(individum):
+    # 1. Kriterium: Übereinstimmung der Kosten
+    # 2. Kriterium: Trips innerhalb der Wallets sollen sich ähneln (Jaccard)
+
+    wallet_summen = []
+
+    for i in range(len(individum)):
+        wallet_summen[individum[i]] += results[i].cost
+        #Kostenfehler als absoluten Wert darstellen -> Fehler von 0 ist perfekt
 
 
 
@@ -581,6 +615,8 @@ def main():
     #compareTripsMin()
     #compareTripsSum()
     #compareTripsMax()
+    print("Numer of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
+    pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
 
 
     #write wallet results
