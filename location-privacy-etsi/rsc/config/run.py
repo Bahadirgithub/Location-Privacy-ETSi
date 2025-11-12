@@ -17,8 +17,16 @@ def generate():
     exe += ' --inpath ' + str(generation.get('inpath'))
     exe += ' --outpath ' + str(generation.get('outpath'))
     exe += ' --agents ' + str(generation.get('agents'))
-    exe += ' --parttime ' + str(generation.get('parttime'))
-    exe += ' --nighttime ' + str(generation.get('nighttime'))
+
+    # --- ENTFERNT ---
+    # Die alten, festen Prozent-Argumente werden nicht mehr benötigt.
+    # exe += ' --parttime ' + str(generation.get('parttime'))
+    # exe += ' --nighttime ' + str(generation.get('nighttime'))
+
+    # --- HINZUGEFÜGT ---
+    # Übergibt den Pfad zur neuen Agenten-Konfigurationsdatei
+    exe += ' --agentconfig ' + str(generation.get('agentconfig'))
+
     exe += ' --days ' + str(generation.get('days'))
     exe += ' --mapin ' + str(generation.get('mapin'))
     exe += ' --routesout ' + str(generation.get('groutesout'))
@@ -45,9 +53,9 @@ def simulate():
     exe += ' --sumocfg ' + simulation.get('sumocfg')
     exe += ' --cout ' + simulation.get('coutput')
     exe += ' --aout ' + simulation.get('aoutput')
-    exe += ' --junctions ' + simulation.get('junctions')
-    exe += ' --detectors ' + simulation.get('detectors')
-    exe += ' --tripinfo ' + simulation.get('tripinfo')
+    exe += ' --junctions ' + str(simulation.get('junctions'))
+    exe += ' --detectors ' + str(simulation.get('detectors'))
+    exe += ' --tripinfo ' + str(simulation.get('tripinfo'))
     exe += ' --seed ' + str(simulation.get('seed'))
     if not simulation.get('report'):
         exe += ' --no-report '
@@ -77,7 +85,7 @@ def attackerAdvanced():
     exe += ' --report ' + report
     exe += ' --simulatedAnnealing ' + str(attackerAdvanc.get('simulatedAnnealing'))
     exe += ' --simulatedTimes ' + str(attackerAdvanc.get('simulatedTimes'))
-    os.system(exe)    
+    os.system(exe)
 
 
 
@@ -99,7 +107,7 @@ if __name__ == "__main__":
 
     # Empty report file
     report = config.get('report')
-    f = open('../reports/' + report, 'w')
+    f = open('../reports/'s + report, 'w')
 
     # Get outer tags 'simulation', 'attacker' and 'evaluation' from config file
     generation = config.get('generation')
@@ -119,11 +127,11 @@ if __name__ == "__main__":
         attack()
 
     if attackerAdvanc.get('run'):
-        attackerAdvanced()    
+        attackerAdvanced()
 
     if eval.get('run'):
         evaluate()
-    
+
     if simulation.get('run'):
         newname = generation.get('net_prefix') + '_' + str(generation.get('agents')) + '_' + str(generation.get('days')) + '_' + simulation.get('coutput')
         os.replace('../' + simulation.get('outpath') + simulation.get('coutput'), '../' + simulation.get('outpath') + newname)
