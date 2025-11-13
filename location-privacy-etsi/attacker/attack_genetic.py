@@ -225,7 +225,7 @@ def findTrips():
 # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
 #Erste Test Parameter
-POPULATION_SIZE = 10 #Für Testzwecke sonst eher 100+
+POPULATION_SIZE = 1000 #Für Testzwecke sonst eher 100+
 GENOME_LENGHT = 20 #Anzahl der sets
 MUTATION_RATE = 0.01
 CROSSOVER_RATE = 0.01
@@ -251,15 +251,33 @@ def initial_population(num_trips, num_wallets):
 #TO DO: Fitnessfunktion muss implementiert werden!!!
 
 #Herausforderung: Fitnessfunktion muss einer gesamten Zuweisung eine Zahl (Score) geben
-def fitness(individum):
+def fitness(individum, trips, wallets):
     # 1. Kriterium: Übereinstimmung der Kosten
     # 2. Kriterium: Trips innerhalb der Wallets sollen sich ähneln (Jaccard)
 
-    wallet_summen = []
+    N_WALLETS = len(wallets)
 
-    for i in range(len(individum)):
-        wallet_summen[individum[i]] += results[i].cost
-        #Kostenfehler als absoluten Wert darstellen -> Fehler von 0 ist perfekt
+    calculated_sums = [0] * N_WALLETS
+
+    for trip_index, wallet_id in enumerate(individum):
+        #Kosten des Trips
+        trip_cost = trips[trip_index].cost
+
+        #Addiere Kosten
+        calculated_sums[wallet_id] += trip_cost
+
+    #Listen sortieren
+    sorted_targets = sorted(wallets)
+    sorted_calculated = sorted(calculated_sums)
+
+    #Berechne die Fehler
+    error = 0
+
+    for i in range(N_WALLETS):
+        error += abs(sorted_targets[i] - sorted_calculated[i])
+
+    score = 1.0 / (1.0 + error) #+1 damit nicht durch 0 geteilt wird
+    return score
 
 
 
@@ -618,6 +636,11 @@ def main():
     print("Numer of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
     pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
 
+    scores_test = []
+
+    for i in range(POPULATION_SIZE):
+        scores_test.append(fitness(pop[i], results, walletCosts))
+    print("Bestes Ergebniss: " + str(max(scores_test)))
 
     #write wallet results
     wallets =  ET.SubElement(output_root, "wallets")
