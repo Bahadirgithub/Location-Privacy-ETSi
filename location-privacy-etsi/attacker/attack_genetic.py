@@ -5,11 +5,11 @@ import sys
 import time
 import networkx as nx
 import xml.etree.ElementTree as ET
-import numpy as np
 import random
 from copy import copy
 from tqdm import tqdm
 from datetime import datetime
+import genetic
 
 #possible trip that was found with all the information
 class Trip:
@@ -225,7 +225,7 @@ def findTrips():
 # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
 #Erste Test Parameter
-POPULATION_SIZE = 1000 #Für Testzwecke sonst eher 100+
+POPULATION_SIZE = 5000 #Für Testzwecke sonst eher 100+
 GENOME_LENGHT = 20 #Anzahl der sets
 MUTATION_RATE = 0.01
 CROSSOVER_RATE = 0.01
@@ -635,6 +635,8 @@ def main():
     #compareTripsMax()
     print("Numer of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
     pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
+
+    pop2 = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE)
 
     scores_test = []
 
