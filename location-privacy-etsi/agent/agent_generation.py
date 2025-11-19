@@ -1,5 +1,6 @@
 # coding: utf-8
-import os, sys
+import os
+import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from model.Worker import Worker
@@ -14,13 +15,21 @@ from model.District import *
 from model.Location import *
 
 from lxml import etree
-import csv, argparse, time, numpy as np, yaml, random
+import csv
+import argparse
+import time
+import numpy as np
+import yaml
 from datetime import datetime
 import random
 
 # Globale Variable für die geladene Konfiguration
 agent_config = None
 
+
+# ---------------------------------------------------------------------------
+# Hilfsfunktionen
+# ---------------------------------------------------------------------------
 
 # Parse map and create locations from edges
 def create_test_locations(map_path):
@@ -36,27 +45,31 @@ def create_test_locations(map_path):
 
 
 # create and test agents
-# Nimmt die geladenen Profile und Prozentsätze entgegen
+# Diese Funktion nimmt die geladenen Profile und Prozentsätze entgegen
 def create_test_agents(number, locations, profiles, percentages):
     test_agents = []
 
     # Prozente sind Brüche (0–1). Erzeuge Stückzahlen:
-    number_of_parttime   = int(number * percentages.get('parttimeworker', 0.0))
+    number_of_parttime = int(number * percentages.get('parttimeworker', 0.0))
     number_of_nightworker = int(number * percentages.get('nightworker', 0.0))
-    number_of_homestay   = int(number * percentages.get('homestay', 0.0))
-    number_of_freelance  = int(number * percentages.get('freelance', 0.0))
+    number_of_homestay = int(number * percentages.get('homestay', 0.0))
+    number_of_freelance = int(number * percentages.get('freelance', 0.0))
     # Rest sind Worker
-    number_of_worker = number - (number_of_parttime + number_of_nightworker +
-                                 number_of_homestay + number_of_freelance)
+    number_of_worker = number - (
+            number_of_parttime
+            + number_of_nightworker
+            + number_of_homestay
+            + number_of_freelance
+    )
 
     # Start-Indizes
-    start_parttime   = 0
+    start_parttime = 0
     start_nightworker = start_parttime + number_of_parttime
-    start_homestay   = start_nightworker + number_of_nightworker
-    start_freelance  = start_homestay + number_of_homestay
-    start_worker     = start_freelance + number_of_freelance
+    start_homestay = start_nightworker + number_of_nightworker
+    start_freelance = start_homestay + number_of_homestay
+    start_worker = start_freelance + number_of_freelance
 
-    # Debug
+    # Debug-Ausgabe
     print("Agenten-Verteilung wird erstellt:")
     print(f"  PartTimeWorker: {number_of_parttime}")
     print(f"  NightWorker:    {number_of_nightworker}")
@@ -67,30 +80,47 @@ def create_test_agents(number, locations, profiles, percentages):
 
     for i in range(number):
         if i < start_nightworker:
-            # PartTimeWorker
+            # --- Erstelle PartTimeWorker ---
+            leisure = np.random.choice(
+                locations,
+                random.choice([1, 2, 3, 4, 5]),
+                replace=False
+            ).tolist()
             test_agents.append(
                 PartTimeWorker(
                     'pt_worker' + str(i),
                     random.choice(home_district.locations),
                     random.choice(work_district.locations),
-                    np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                    leisure,
                     profiles['parttimeworker']
                 )
             )
+
         elif i < start_homestay:
-            # NightWorker
+            # --- Erstelle NightWorker ---
+            chores = np.random.choice(
+                locations,
+                random.choice([1, 2, 3, 4, 5]),
+                replace=False
+            ).tolist()
             test_agents.append(
                 NightWorker(
                     'n_worker' + str(i),
                     random.choice(home_district.locations),
                     random.choice(work_district.locations),
                     random.choice(locations),
-                    np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                    chores,
                     profiles['nightworker']
                 )
             )
+
         elif i < start_freelance:
-            # Homestay
+            # --- Erstelle Homestay ---
+            extra_locations = np.random.choice(
+                locations,
+                random.choice([1, 2, 3, 4, 5]),
+                replace=False
+            ).tolist()
             test_agents.append(
                 Homestay(
                     'homestay' + str(i),
@@ -98,32 +128,45 @@ def create_test_agents(number, locations, profiles, percentages):
                     random.choice(locations),  # school
                     random.choice(locations),  # grocery
                     random.choice(locations),  # activity
-                    np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                    extra_locations,
                     profiles['homestay']
                 )
             )
+
         elif i < start_worker:
-            # Freelance
+            # --- Erstelle Freelance ---
+            leisure_locations = np.random.choice(
+                locations,
+                random.choice([1, 2, 3, 4, 5]),
+                replace=False
+            ).tolist()
             test_agents.append(
                 Freelance(
                     'freelance' + str(i),
                     random.choice(home_district.locations),
-                    np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                    leisure_locations,
                     profiles['freelance']
                 )
             )
+
         else:
-            # Worker (Full-Time)
+            # --- Erstelle Worker (Full-Time) ---
+            errands = np.random.choice(
+                locations,
+                random.choice([1, 2, 3, 4, 5]),
+                replace=False
+            ).tolist()
             test_agents.append(
                 Worker(
                     'worker' + str(i),
                     random.choice(home_district.locations),
                     random.choice(work_district.locations),
                     random.choice(locations),
-                    np.random.choice(locations, random.choice([1, 2, 3, 4, 5]), replace=False),
+                    errands,
                     profiles['worker']
                 )
             )
+
     return test_agents
 
 
@@ -139,12 +182,25 @@ def generate_demand(agents, duration):
 # Generate entire demand and file.
 def generate_demand_file(filename, agents, duration):
     root = etree.Element('routes')
+
+    # vType für jeden Agenten
     for a in agents:
-        root.append(etree.Element('vType', id=a.id, accel='1.0', decel='5.0',
-                                  length='5.0', maxSpeed='50.0', sigma='0.0'))
+        root.append(
+            etree.Element(
+                'vType',
+                id=a.id,
+                accel='1.0',
+                decel='5.0',
+                length='5.0',
+                maxSpeed='50.0',
+                sigma='0.0'
+            )
+        )
+
     demand = generate_demand(agents, duration)
+
+    # Trips hinzufügen
     for d in demand:
-        # 'from' ist Schlüsselwort; daher set()
         new = etree.Element('trip')
         new.set('id', d.id)
         new.set('type', d.agent.id)
@@ -152,6 +208,7 @@ def generate_demand_file(filename, agents, duration):
         new.set('from', d.start.edge_id)
         new.set('to', d.end.edge_id)
         root.append(new)
+
     tree = etree.ElementTree(root)
     tree.write(filename, pretty_print=True)
 
@@ -160,6 +217,7 @@ def generate_demand_file(filename, agents, duration):
 def generate():
     test_locations = create_test_locations(in_path + mapin)
 
+    # Übergibt die geladenen Profile und Prozentsätze an die Erstellungs-Funktion
     test_agents = create_test_agents(
         number_of_agents,
         test_locations,
@@ -167,8 +225,10 @@ def generate():
         agent_config['agent_distribution']
     )
 
+    # Routes-Datei
     generate_demand_file(out_path + routesout, test_agents, number_of_days)
 
+    # Vehicle map
     veh_map_path = out_path + vehmapout
     with open(veh_map_path, 'w', newline='') as veh_map_file:
         writer = csv.writer(veh_map_file)
@@ -193,7 +253,7 @@ def report():
         f.write('Number of agents:           ' + str(number_of_agents) + '\n')
         f.write('Agent Distribution:\n')
         for key, value in agent_config['agent_distribution'].items():
-            f.write(f'  {key}: {round(value * 100, 2)}%\n')  # value is a fraction
+            f.write(f'  {key}: {round(value * 100, 2)}%\n')  # value ist Bruch (0..1)
         f.write('Number of days:             ' + str(number_of_days) + '\n\n')
         f.write('Routing written to          ' + str(out_path + routesout) + '\n')
         f.write('Vehicle map written to      ' + str(out_path + vehmapout) + '\n\n')
@@ -204,30 +264,94 @@ def report():
 # Gets command line arguments
 def get_options():
     parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('--inpath', dest='in_path', type=str, default='../rsc/traffic/',
-                        help='Relative path to resource file directory')
-    parser.add_argument('--outpath', dest='out_path', type=str, default='../rsc/traffic/',
-                        help='Relative path to output directory')
-    parser.add_argument('--agents', dest='number_of_agents', type=int, default=20,
-                        help='Number of agents')
+    parser.add_argument(
+        '--inpath',
+        dest='in_path',
+        type=str,
+        default='../rsc/traffic/',
+        help='Relative path to resource file directory'
+    )
+    parser.add_argument(
+        '--outpath',
+        dest='out_path',
+        type=str,
+        default='../rsc/traffic/',
+        help='Relative path to output directory'
+    )
+    parser.add_argument(
+        '--agents',
+        dest='number_of_agents',
+        type=int,
+        default=20,
+        help='Number of agents'
+    )
 
     # Pfad zur YAML-Konfiguration der Agenten
-    parser.add_argument('--agentconfig', dest='agent_config_path', type=str,
-                        default='../rsc/config/agent_profiles.yaml',
-                        help='Path to agent profiles config YAML file')
+    parser.add_argument(
+        '--agentconfig',
+        dest='agent_config_path',
+        type=str,
+        default='../rsc/config/agent_profiles.yaml',
+        help='Path to agent profiles config YAML file'
+    )
 
-    parser.add_argument('--days', dest='number_of_days', type=int, default=30,
-                        help='Number of days')
-    parser.add_argument('--mapin', dest='map_input_name', type=str, default='map.xml')
-    parser.add_argument('--routesout', dest='routes_output_name', type=str, default='routes.xml')
-    parser.add_argument('--vehmapout', dest='vehicle_map_output_name', type=str, default='vehicle_map.csv')
-    parser.add_argument('--homedistrict', dest='home_district', type=str, default='')
-    parser.add_argument('--workdistrict', dest='work_district', type=str, default='')
-    parser.add_argument('--reportpath', dest='report_path', type=str, default='../rsc/reports/',
-                        help='Report output directory')
-    parser.add_argument('--reportname', dest='report_name', type=str, default='report.txt',
-                        help='Set report name')
-    parser.add_argument('--no-report', dest='report', action='store_false', help='Do not write report')
+    parser.add_argument(
+        '--days',
+        dest='number_of_days',
+        type=int,
+        default=30,
+        help='Number of days'
+    )
+    parser.add_argument(
+        '--mapin',
+        dest='map_input_name',
+        type=str,
+        default='map.xml'
+    )
+    parser.add_argument(
+        '--routesout',
+        dest='routes_output_name',
+        type=str,
+        default='routes.xml'
+    )
+    parser.add_argument(
+        '--vehmapout',
+        dest='vehicle_map_output_name',
+        type=str,
+        default='vehicle_map.csv'
+    )
+    parser.add_argument(
+        '--homedistrict',
+        dest='home_district',
+        type=str,
+        default=''
+    )
+    parser.add_argument(
+        '--workdistrict',
+        dest='work_district',
+        type=str,
+        default=''
+    )
+    parser.add_argument(
+        '--reportpath',
+        dest='report_path',
+        type=str,
+        default='../rsc/reports/',
+        help='Report output directory'
+    )
+    parser.add_argument(
+        '--reportname',
+        dest='report_name',
+        type=str,
+        default='report.txt',
+        help='Set report name'
+    )
+    parser.add_argument(
+        '--no-report',
+        dest='report',
+        action='store_false',
+        help='Do not write report'
+    )
     parser.set_defaults(report=True)
     return parser.parse_args()
 
@@ -245,6 +369,9 @@ def string_to_polygon_array(polygon_string):
     return result
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     # CLI args
     args = get_options()
