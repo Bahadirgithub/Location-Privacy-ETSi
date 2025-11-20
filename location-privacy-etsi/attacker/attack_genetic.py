@@ -636,18 +636,15 @@ def main():
     print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
     #pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
 
-    pop = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE)
-
-    scores_test = []
 
     #Generate Trip costs
     trips_cost = []
     for i in range(len(results)):
         trips_cost.append(results[i].cost)
 
-    for i in range(POPULATION_SIZE):
-        scores_test.append(genetic.fitness(pop[i], len(walletCosts), trips_cost, sorted(walletCosts))) #Mit Rust implementierung
-    print("Bestes Ergebniss: " + str(max(scores_test)))
+    pop = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
+
+    scores_test = []
 
     #write wallet results
     wallets =  ET.SubElement(output_root, "wallets")

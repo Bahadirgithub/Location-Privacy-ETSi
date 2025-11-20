@@ -5,7 +5,34 @@ use pyo3::prelude::*;
 mod genetic {
     use pyo3::prelude::*;
     use rand::Rng;
-    #[pyfunction]
+
+    #[pyclass]
+    struct Individual {
+        genome: Vec<u32>,
+        score: f64
+    }
+
+
+    #[pymethods]
+    impl Individual {
+        #[new]
+        fn new(genome: Vec<u32>, score: f64) -> Self {
+            Individual { genome, score }
+        }
+
+        fn get_genome(&self) -> Vec<u32> {
+            self.genome.clone()
+        }
+
+        fn get_score(&self) -> f64 {
+            self.score
+        }
+
+        fn __repr__(&self) -> String {
+            format!("Individual(score={:.6}, genome={:?})", self.score, self.genome)
+        }
+    }
+
     fn create_individual(num_trips: u32, num_wallets: u32) -> Vec<u32>{
         let mut result = vec![0u32; num_trips as usize];
 
@@ -16,19 +43,6 @@ mod genetic {
         result
     }
 
-    #[pyfunction]
-    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32) -> Vec<Vec<u32>>{
-        let mut result = vec![Vec::new(); population_size as usize];
-
-        for i in 0..population_size {
-            let individual = create_individual(num_trips, num_wallets);
-            result[i as usize] = individual;
-        }
-
-        result
-    }
-
-    #[pyfunction]
     fn fitness(individual: Vec<u32>, num_wallets: usize, trip_cost: Vec<u32>, sorted_wallets: Vec<u32>) -> f64{
         let mut current_wallet_sums= vec![0u32; num_wallets];
 
@@ -51,4 +65,38 @@ mod genetic {
         1.0 / (1.0 + (total_error as f64))
     }
 
+    #[pyfunction]
+    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
+        let mut population: Vec<Individual> = Vec::new();
+
+        for _ in 0..population_size {
+            let genome = create_individual(num_trips, num_wallets);
+
+            let score = fitness(genome.clone(), num_wallets as usize, trips_costs.clone(), sorted_wallets.clone()); //Ändern Pointer übergeben statt clone()!!!
+
+            let ind = Individual{genome, score};
+
+            population.push(ind);
+        }
+
+        population
+    }
+
+
+    /*
+    #[pyfunction]
+    fn selection(population: Vec<Individual>, tournament_size:usize) -> Vec<Individual>{
+        //https://www.baeldung.com/cs/ga-tournament-selection
+        let mut result = vec![Vec::new(); population.len()];
+
+        for i in 0..population.len(){
+            //Tournament winners
+
+
+        }
+
+
+        result
+    }
+    */
 }
