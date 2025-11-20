@@ -13,7 +13,7 @@ mod genetic {
             let id = rand::thread_rng().gen_range(0..num_wallets) as u32;
             result[i as usize] = id;
         }
-        result //Return
+        result
     }
 
     #[pyfunction]
@@ -26,6 +26,29 @@ mod genetic {
         }
 
         result
+    }
+
+    #[pyfunction]
+    fn fitness(individual: Vec<u32>, num_wallets: usize, trip_cost: Vec<u32>, sorted_wallets: Vec<u32>) -> f64{
+        let mut current_wallet_sums= vec![0u32; num_wallets];
+
+        for(trip_id, wallet_id) in individual.iter().enumerate(){
+            let trip_sum = trip_cost[trip_id];
+
+            current_wallet_sums[*wallet_id as usize] += trip_sum;
+        }
+
+        //current_wallets sortieren
+        current_wallet_sums.sort_unstable(); //schneller sortier algorithmus
+
+        let mut total_error:u32 = 0;
+
+        for i in 0..num_wallets{
+            total_error += current_wallet_sums[i].abs_diff(sorted_wallets[i]);
+        }
+
+        //Score berechnen
+        1.0 / (1.0 + (total_error as f64))
     }
 
 }

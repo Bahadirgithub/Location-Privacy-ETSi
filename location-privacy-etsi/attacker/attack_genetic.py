@@ -225,7 +225,7 @@ def findTrips():
 # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
 #Erste Test Parameter
-POPULATION_SIZE = 5000 #Für Testzwecke sonst eher 100+
+POPULATION_SIZE = 500
 GENOME_LENGHT = 20 #Anzahl der sets
 MUTATION_RATE = 0.01
 CROSSOVER_RATE = 0.01
@@ -633,15 +633,20 @@ def main():
     #compareTripsMin()
     #compareTripsSum()
     #compareTripsMax()
-    print("Numer of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
-    pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
+    print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
+    #pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
 
-    pop2 = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE)
+    pop = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE)
 
     scores_test = []
 
+    #Generate Trip costs
+    trips_cost = []
+    for i in range(len(results)):
+        trips_cost.append(results[i].cost)
+
     for i in range(POPULATION_SIZE):
-        scores_test.append(fitness(pop[i], results, walletCosts))
+        scores_test.append(genetic.fitness(pop[i], len(walletCosts), trips_cost, sorted(walletCosts))) #Mit Rust implementierung
     print("Bestes Ergebniss: " + str(max(scores_test)))
 
     #write wallet results
