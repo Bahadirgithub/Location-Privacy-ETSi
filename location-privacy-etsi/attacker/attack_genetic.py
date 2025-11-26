@@ -646,6 +646,10 @@ def main():
 
     scores_test = []
 
+    for _ in range(10):
+        selection = genetic.selection(pop, 15, 25)
+        print("selected!")
+
     #write wallet results
     wallets =  ET.SubElement(output_root, "wallets")
     for wallet in results:

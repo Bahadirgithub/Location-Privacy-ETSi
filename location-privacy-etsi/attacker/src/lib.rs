@@ -5,8 +5,10 @@ use pyo3::prelude::*;
 mod genetic {
     use pyo3::prelude::*;
     use rand::Rng;
+    use rand::seq::SliceRandom;
 
     #[pyclass]
+    #[derive(Clone)]
     struct Individual {
         genome: Vec<u32>,
         score: f64
@@ -85,20 +87,28 @@ mod genetic {
    }
 
 
-    /*
+    //Tournament Selection
     #[pyfunction]
-    fn selection(population: Vec<Individual>, tournament_size:usize) -> Vec<Individual>{
+    fn selection(population: Vec<Individual>, tournament_num:usize, tournament_size:usize) -> Vec<Individual>{
         //https://www.baeldung.com/cs/ga-tournament-selection
-        let mut result = vec![Vec::new(); population.len()];
+        //https://cratecode.com/info/genetic-algorithms-selection-techniques
+        let mut result = Vec::new();
 
-        for i in 0..population.len(){
-            //Tournament winners
+        let population_size = population.len();
 
+        for i in 0..tournament_num {
+            //Select a random subset from population
+            let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
 
+            //Select a winner of the tournament (highest score)
+            let mut winner = &tournament[0];
+            for j in 1..tournament.len(){
+                if tournament[j].score > winner.score {
+                    winner = &tournament[j];
+                }
+            }
+            result.push(winner.clone());
         }
-
-
         result
     }
-    */
 }
