@@ -642,17 +642,9 @@ def main():
     for i in range(len(results)):
         trips_cost.append(results[i].cost)
 
-    pop = genetic.initial_population(len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
+    pop = genetic.main(100, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
 
     scores_test = []
-
-    for _ in range(10):
-        selection = genetic.selection(pop, 15, 25)
-        for i in range(0, 14, 2):
-            crossover = []
-            child_1, child_2 = genetic.crossover(selection[i], selection[i+1], len(walletCosts), trips_cost, sorted(walletCosts))
-            crossover.append(child_1)
-            crossover.append(child_2)
 
     #write wallet results
     wallets =  ET.SubElement(output_root, "wallets")

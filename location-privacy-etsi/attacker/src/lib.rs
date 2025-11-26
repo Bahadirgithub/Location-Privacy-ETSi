@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+//https://cratecode.com/info/genetic-algorithms-implementation-in-python
 
 /// A Python module implemented in Rust.
 #[pymodule]
@@ -64,9 +65,8 @@ mod genetic {
         1.0 / (1.0 + (total_error as f64))
    }
 
-    #[pyfunction]
-    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual> {
 
+    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: &[u32], trips_costs: &[u32]) -> Vec<Individual> {
         let mut population = Vec::new();
 
         for _ in 0..population_size {
@@ -88,7 +88,6 @@ mod genetic {
 
 
     //Tournament Selection
-    #[pyfunction]
     fn selection(population: Vec<Individual>, tournament_num:usize, tournament_size:usize) -> Vec<Individual>{
         //https://www.baeldung.com/cs/ga-tournament-selection
         //https://cratecode.com/info/genetic-algorithms-selection-techniques
@@ -113,10 +112,8 @@ mod genetic {
     }
 
     //Two-Point Crossover
-    #[pyfunction]
-    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:Vec<u32>, sorted_wallets:Vec<u32>) -> (Individual, Individual){
+    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> (Individual, Individual){
         //https://www.geeksforgeeks.org/machine-learning/crossover-in-genetic-algorithm/
-        //https://cratecode.com/info/genetic-algorithms-implementation-in-python
         let genome_size = parent_1.genome.len();
 
         let mut child_1 = Individual { genome: vec![0; genome_size], score: 0.0};
@@ -145,5 +142,44 @@ mod genetic {
         child_2.score = fitness(&child_2.genome, num_wallets, &trip_cost, &sorted_wallets);
 
         (child_1, child_2)
+    }
+
+    //Main Function
+    #[pyfunction]
+    fn main(generations: usize, num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
+        //let mut result = Vec::new();
+        let result;
+
+        //Init
+        let mut population = initial_population(num_trips, num_wallets, population_size, &sorted_wallets, &trips_costs);
+
+        //Main Loop
+        for i in 0..generations{
+
+            //Store best individuals
+            let mut best_individual = population[0].clone();
+            for j in 0..population.len(){
+                if population[j].score > best_individual.score{
+                    best_individual = population[j].clone();
+                }
+            }
+            let best_score = best_individual.score;
+            println!("Generation {}: Best score is {}", i, best_score);
+
+            population = selection(population, population_size as usize, 7);
+
+            //let mut next_population: Vec<Individual> = Vec::new();
+            for j in (0..population.len()).step_by(2){
+                let parent1 = &population[j];
+                let parent2 = &population[j + 1];
+
+                let (child1, child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips_costs, &sorted_wallets);
+
+                population.push(child1);
+                population.push(child2);
+            }
+        }
+        result = population;
+        result
     }
 }
