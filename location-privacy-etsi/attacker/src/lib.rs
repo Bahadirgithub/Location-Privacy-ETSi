@@ -43,56 +43,45 @@ mod genetic {
         result
     }
 
-   fn fitness(
-       individual: &[u32],
-       num_wallets: usize,
-       trip_cost: &[u32],
-       sorted_wallets: &[u32],
-   ) -> f64 {
-       let mut current_wallet_sums = vec![0u32; num_wallets];
+    fn fitness(individual: &[u32], num_wallets: usize, trip_cost: &[u32], sorted_wallets: &[u32], ) -> f64 {
+        let mut current_wallet_sums = vec![0u32; num_wallets];
 
-       for (trip_id, wallet_id) in individual.iter().enumerate() {
-           let trip_sum = trip_cost[trip_id];
-           current_wallet_sums[*wallet_id as usize] += trip_sum;
-       }
+        for (trip_id, wallet_id) in individual.iter().enumerate() {
+            let trip_sum = trip_cost[trip_id];
+            current_wallet_sums[*wallet_id as usize] += trip_sum;
+        }
 
-       current_wallet_sums.sort_unstable();
+        current_wallet_sums.sort_unstable();
 
-       let mut total_error: u32 = 0;
+        let mut total_error: u32 = 0;
 
-       for i in 0..num_wallets {
-           total_error += current_wallet_sums[i].abs_diff(sorted_wallets[i]);
-       }
+        for i in 0..num_wallets {
+            total_error += current_wallet_sums[i].abs_diff(sorted_wallets[i]);
+        }
 
-       1.0 / (1.0 + (total_error as f64))
+        1.0 / (1.0 + (total_error as f64))
    }
 
     #[pyfunction]
-   fn initial_population(
-       num_trips: u32,
-       num_wallets: u32,
-       population_size: u32,
-       sorted_wallets: &[u32],
-       trips_costs: &[u32]
-   ) -> Vec<Individual> {
+    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual> {
 
-       let mut population = Vec::new();
+        let mut population = Vec::new();
 
-       for _ in 0..population_size {
-           let genome = create_individual(num_trips, num_wallets);
+        for _ in 0..population_size {
+            let genome = create_individual(num_trips, num_wallets);
 
-           // Keine clones mehr!
-           let score = fitness(
-               &genome,
-               num_wallets as usize,
-               trips_costs,
-               sorted_wallets
-           );
+            // Keine clones mehr!
+            let score = fitness(
+                &genome,
+                num_wallets as usize,
+                &trips_costs,
+                &sorted_wallets
+            );
 
-           population.push(Individual { genome, score });
-       }
+            population.push(Individual { genome, score });
+        }
 
-       population
+        population
    }
 
 
