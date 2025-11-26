@@ -45,7 +45,7 @@ mod genetic {
         result
     }
 
-    fn fitness(individual: &[u32], num_wallets: usize, trip_cost: &[u32], sorted_wallets: &[u32], ) -> f64 {
+    fn fitness(individual: &[u32], num_wallets: usize, trip_cost: &[u32], sorted_wallets: &[u32]) -> f64 {
         let mut current_wallet_sums = vec![0u32; num_wallets];
 
         for (trip_id, wallet_id) in individual.iter().enumerate() {
@@ -96,7 +96,7 @@ mod genetic {
 
         let population_size = population.len();
 
-        for i in 0..tournament_num {
+        for _ in 0..tournament_num {
             //Select a random subset from population
             let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
 
@@ -110,5 +110,40 @@ mod genetic {
             result.push(winner.clone());
         }
         result
+    }
+
+    //Two-Point Crossover
+    #[pyfunction]
+    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:Vec<u32>, sorted_wallets:Vec<u32>) -> (Individual, Individual){
+        //https://www.geeksforgeeks.org/machine-learning/crossover-in-genetic-algorithm/
+        //https://cratecode.com/info/genetic-algorithms-implementation-in-python
+        let genome_size = parent_1.genome.len();
+
+        let mut child_1 = Individual { genome: vec![0; genome_size], score: 0.0};
+        let mut child_2 = Individual { genome: vec![0; genome_size], score: 0.0};
+
+        let swap_1 = rand::thread_rng().gen_range(0..genome_size/2) as usize;
+        let swap_2 = rand::thread_rng().gen_range(genome_size/2..genome_size) as usize;
+
+        //parent_1 & parent_2 should have the same genome size!
+        for i in 0..genome_size{
+            if i < swap_1{
+                child_1.genome[i] = parent_1.genome[i];
+                child_2.genome[i] = parent_2.genome[i];
+            }
+            else if (i >= swap_1) && (i < swap_2){
+                child_1.genome[i] = parent_2.genome[i];
+                child_2.genome[i] = parent_1.genome[i];
+            }
+            else{
+                child_1.genome[i] = parent_1.genome[i];
+                child_2.genome[i] = parent_2.genome[i];
+            }
+        }
+
+        child_1.score = fitness(&child_1.genome, num_wallets, &trip_cost, &sorted_wallets);
+        child_2.score = fitness(&child_2.genome, num_wallets, &trip_cost, &sorted_wallets);
+
+        (child_1, child_2)
     }
 }

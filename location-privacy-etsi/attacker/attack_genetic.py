@@ -648,7 +648,11 @@ def main():
 
     for _ in range(10):
         selection = genetic.selection(pop, 15, 25)
-        print("selected!")
+        for i in range(0, 14, 2):
+            crossover = []
+            child_1, child_2 = genetic.crossover(selection[i], selection[i+1], len(walletCosts), trips_cost, sorted(walletCosts))
+            crossover.append(child_1)
+            crossover.append(child_2)
 
     #write wallet results
     wallets =  ET.SubElement(output_root, "wallets")
