@@ -36,12 +36,12 @@ mod genetic {
         }
     }
 
-    fn create_individual(num_trips: u32, num_wallets: u32) -> Vec<u32>{
-        let mut result = vec![0u32; num_trips as usize];
+    fn create_individual(num_trips: usize, num_wallets: usize) -> Vec<u32>{
+        let mut result = vec![0u32; num_trips];
 
         for i in 0..num_trips {
             let id = rand::thread_rng().gen_range(0..num_wallets) as u32;
-            result[i as usize] = id;
+            result[i] = id;
         }
         result
     }
@@ -66,7 +66,7 @@ mod genetic {
    }
 
 
-    fn initial_population(population_size: u32, num_trips: u32, num_wallets: u32, trips_costs: &[u32], sorted_wallets: &[u32]) -> Vec<Individual> {
+    fn initial_population(population_size: u32, num_trips: usize, num_wallets: usize, trips_costs: &[u32], sorted_wallets: &[u32]) -> Vec<Individual> {
         let mut population = Vec::new();
 
         for _ in 0..population_size {
@@ -75,7 +75,7 @@ mod genetic {
             // Keine clones mehr!
             let score = fitness(
                 &genome,
-                num_wallets as usize,
+                num_wallets,
                 &trips_costs,
                 &sorted_wallets
             );
@@ -117,8 +117,8 @@ mod genetic {
         let mut child_1 = Individual { genome: vec![0; genome_size], score: 0.0};
         let mut child_2 = Individual { genome: vec![0; genome_size], score: 0.0};
 
-        let swap_1 = rand::thread_rng().gen_range(0..genome_size/2) as usize;
-        let swap_2 = rand::thread_rng().gen_range(genome_size/2..genome_size) as usize;
+        let swap_1 = rand::thread_rng().gen_range(0..genome_size/2);
+        let swap_2 = rand::thread_rng().gen_range(genome_size/2..genome_size);
 
         //parent_1 & parent_2 should have the same genome size!
         for i in 0..genome_size{
@@ -147,17 +147,17 @@ mod genetic {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
         let genome_size = mutant.genome.len();
 
-        let rand1 = rand::thread_rng().gen_range(0..genome_size);
-        let mut rand2 = rand::thread_rng().gen_range(0..genome_size);
+        let rand_1 = rand::thread_rng().gen_range(0..genome_size);
+        let mut rand_2 = rand::thread_rng().gen_range(0..genome_size);
         //rand1 cannot be the same number as rand2
-        while rand1 == rand2 {
-            rand2 = rand::thread_rng().gen_range(0..genome_size);
+        while rand_1 == rand_2 {
+            rand_2 = rand::thread_rng().gen_range(0..genome_size);
         }
 
         //Swap
-        let temp = mutant.genome[rand1];
-        mutant.genome[rand1] = mutant.genome[rand2];
-        mutant.genome[rand2] = temp;
+        let temp = mutant.genome[rand_1];
+        mutant.genome[rand_1] = mutant.genome[rand_2];
+        mutant.genome[rand_2] = temp;
 
         //Calculate fitness
         mutant.score = fitness(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
@@ -166,10 +166,26 @@ mod genetic {
     }
 
     //Scramble Mutation
+    fn mutation_big(mut mutant:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> Individual {
+        //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
+        let genome_size = mutant.genome.len();
+
+        let slice_len = rand::thread_rng().gen_range(1..genome_size);
+        let rand_1 = rand::thread_rng().gen_range(0..genome_size - slice_len + 1);
+        let rand_2 = rand_1 + slice_len;
+
+        let slice = &mut mutant.genome[rand_1..rand_2];
+        slice.shuffle(&mut rand::thread_rng());
+
+        //Calculate fitness
+        mutant.score = fitness(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+
+        mutant
+    }
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize, num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
+    fn main(generations: usize,p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Init
@@ -190,12 +206,27 @@ mod genetic {
 
             population = selection(population, population_size as usize, 7);
 
-            //let mut next_population: Vec<Individual> = Vec::new();
             for j in (0..population.len()).step_by(2){
                 let parent1 = &population[j];
                 let parent2 = &population[j + 1];
 
-                let (child1, child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips_costs, &sorted_wallets);
+                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips_costs, &sorted_wallets);
+
+                // Apply small mutation (swap) with probability
+                if rand::random::<f32>() < p_mutation_small {
+                    child1 = mutation_small(child1, num_wallets, &trips_costs, &sorted_wallets);
+                }
+                if rand::random::<f32>() < p_mutation_small {
+                    child2 = mutation_small(child2, num_wallets, &trips_costs, &sorted_wallets);
+                }
+
+                // Apply big mutation (scramble) with probability
+                if rand::random::<f32>() < p_mutation_big {
+                    child1 = mutation_big(child1, num_wallets, &trips_costs, &sorted_wallets);
+                }
+                if rand::random::<f32>() < p_mutation_big {
+                    child2 = mutation_big(child2, num_wallets, &trips_costs, &sorted_wallets);
+                }
 
                 population.push(child1);
                 population.push(child2);

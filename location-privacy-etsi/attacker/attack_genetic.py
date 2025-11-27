@@ -642,7 +642,7 @@ def main():
     for i in range(len(results)):
         trips_cost.append(results[i].cost)
 
-    pop = genetic.main(100, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
+    pop = genetic.main(100, 0.05, 0.02, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
 
     scores_test = []
 
