@@ -66,7 +66,7 @@ mod genetic {
    }
 
 
-    fn initial_population(num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: &[u32], trips_costs: &[u32]) -> Vec<Individual> {
+    fn initial_population(population_size: u32, num_trips: u32, num_wallets: u32, trips_costs: &[u32], sorted_wallets: &[u32]) -> Vec<Individual> {
         let mut population = Vec::new();
 
         for _ in 0..population_size {
@@ -92,9 +92,7 @@ mod genetic {
         //https://www.baeldung.com/cs/ga-tournament-selection
         //https://cratecode.com/info/genetic-algorithms-selection-techniques
         let mut result = Vec::new();
-
-        let population_size = population.len();
-
+        
         for _ in 0..tournament_num {
             //Select a random subset from population
             let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
@@ -144,14 +142,21 @@ mod genetic {
         (child_1, child_2)
     }
 
+    //Swap Mutation
+    fn mutation_small(){
+        //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
+
+    }
+
+    //Scramble Mutation
+
     //Main Function
     #[pyfunction]
     fn main(generations: usize, num_trips: u32, num_wallets: u32, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
-        //let mut result = Vec::new();
-        let result;
+        //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Init
-        let mut population = initial_population(num_trips, num_wallets, population_size, &sorted_wallets, &trips_costs);
+        let mut population = initial_population(population_size, num_trips,num_wallets, &trips_costs, &sorted_wallets);
 
         //Main Loop
         for i in 0..generations{
@@ -179,7 +184,6 @@ mod genetic {
                 population.push(child2);
             }
         }
-        result = population;
-        result
+        population
     }
 }
