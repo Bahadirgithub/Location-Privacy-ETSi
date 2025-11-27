@@ -11,7 +11,9 @@ mod genetic {
     #[pyclass]
     #[derive(Clone)]
     struct Individual {
+        #[pyo3(get, set)]
         genome: Vec<u32>,
+        #[pyo3(get, set)]
         score: f64
     }
 
@@ -21,14 +23,6 @@ mod genetic {
         #[new]
         fn new(genome: Vec<u32>, score: f64) -> Self {
             Individual { genome, score }
-        }
-
-        fn get_genome(&self) -> Vec<u32> {
-            self.genome.clone()
-        }
-
-        fn get_score(&self) -> f64 {
-            self.score
         }
 
         fn __repr__(&self) -> String {
@@ -204,11 +198,12 @@ mod genetic {
             let best_score = best_individual.score;
             println!("Generation {}: Best score is {}", i, best_score);
 
-            population = selection(population, population_size as usize, 7);
+            let parents = selection(population, population_size as usize, 7);
 
-            for j in (0..population.len()).step_by(2){
-                let parent1 = &population[j];
-                let parent2 = &population[j + 1];
+            let mut next_generation: Vec<Individual> = Vec::new();
+            for j in (0..parents.len()).step_by(2){
+                let parent1 = &parents[j];
+                let parent2 = &parents[j + 1];
 
                 let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips_costs, &sorted_wallets);
 
@@ -228,9 +223,10 @@ mod genetic {
                     child2 = mutation_big(child2, num_wallets, &trips_costs, &sorted_wallets);
                 }
 
-                population.push(child1);
-                population.push(child2);
+                next_generation.push(child1);
+                next_generation.push(child2);
             }
+            population = next_generation;
         }
         population
     }

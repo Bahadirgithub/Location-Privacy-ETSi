@@ -224,60 +224,7 @@ def findTrips():
 #Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
 # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
-#Erste Test Parameter
 POPULATION_SIZE = 500
-GENOME_LENGHT = 20 #Anzahl der sets
-MUTATION_RATE = 0.01
-CROSSOVER_RATE = 0.01
-
-def create_individual(num_trips, num_wallets): #Eine Lösungsmenge= Individum / Genom
-    genome = []
-    for _ in range(num_trips):
-        #Zufällige Zuordnung
-        wallet_id = random.randint(0, num_wallets - 1)
-        genome.append(wallet_id)
-    return genome
-
-def initial_population(num_trips, num_wallets):
-    population = []
-
-    #Erzeuge erste Generation
-    for _ in range(POPULATION_SIZE):
-        individual = create_individual(num_trips, num_wallets)
-        population.append(individual)
-
-    return population
-
-#TO DO: Fitnessfunktion muss implementiert werden!!!
-
-#Herausforderung: Fitnessfunktion muss einer gesamten Zuweisung eine Zahl (Score) geben
-def fitness(individum, trips, wallets):
-    # 1. Kriterium: Übereinstimmung der Kosten
-    # 2. Kriterium: Trips innerhalb der Wallets sollen sich ähneln (Jaccard)
-
-    N_WALLETS = len(wallets)
-
-    calculated_sums = [0] * N_WALLETS
-
-    for trip_index, wallet_id in enumerate(individum):
-        #Kosten des Trips
-        trip_cost = trips[trip_index].cost
-
-        #Addiere Kosten
-        calculated_sums[wallet_id] += trip_cost
-
-    #Listen sortieren
-    sorted_targets = sorted(wallets)
-    sorted_calculated = sorted(calculated_sums)
-
-    #Berechne die Fehler
-    error = 0
-
-    for i in range(N_WALLETS):
-        error += abs(sorted_targets[i] - sorted_calculated[i])
-
-    score = 1.0 / (1.0 + error) #+1 damit nicht durch 0 geteilt wird
-    return score
 
 
 
@@ -642,20 +589,32 @@ def main():
     for i in range(len(results)):
         trips_cost.append(results[i].cost)
 
-    pop = genetic.main(100, 0.05, 0.02, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
+    population = genetic.main(1000, 0.05, 0.02, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
 
-    scores_test = []
+    best_individual = max(population, key=lambda ind: ind.score)
+    print(f"Best found solution - Score: {best_individual.score}")
+
+    wallet_assignments = {i: [] for i in range(len(walletCosts))}
+
+    for trip_index, wallet_id in enumerate(best_individual.genome):
+        if wallet_id < len(walletCosts):
+            original_trip = results[trip_index]
+            wallet_assignments[wallet_id].append(original_trip)
+
 
     #write wallet results
-    wallets =  ET.SubElement(output_root, "wallets")
-    for wallet in results:
-        strList = list(map(str, wallet.used))
-        ET.SubElement(wallets, "wallet",  ids = " ".join(strList) )
+    wallets_xml =  ET.SubElement(output_root, "wallets")
+    for wallet_id in range(len(walletCosts)):
+        assigned_trips = wallet_assignments[wallet_id]
+
+        all_transaction_ids = []
+        for trip in assigned_trips:
+            all_transaction_ids.extend(trip.used)
+
+        strList = list(map(str, all_transaction_ids))
+        ET.SubElement(wallets_xml, "wallet", ids=" ".join(strList))
     tree = ET.ElementTree(output_root)
     tree.write('attacks/' + output_file_name)
-    
-
-    
    
     print('Finished')
 
