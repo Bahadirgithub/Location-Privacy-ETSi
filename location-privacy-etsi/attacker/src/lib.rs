@@ -92,7 +92,7 @@ mod genetic {
         //https://www.baeldung.com/cs/ga-tournament-selection
         //https://cratecode.com/info/genetic-algorithms-selection-techniques
         let mut result = Vec::new();
-        
+
         for _ in 0..tournament_num {
             //Select a random subset from population
             let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
@@ -143,9 +143,26 @@ mod genetic {
     }
 
     //Swap Mutation
-    fn mutation_small(){
+    fn mutation_small(mut mutant:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
+        let genome_size = mutant.genome.len();
 
+        let rand1 = rand::thread_rng().gen_range(0..genome_size);
+        let mut rand2 = rand::thread_rng().gen_range(0..genome_size);
+        //rand1 cannot be the same number as rand2
+        while rand1 == rand2 {
+            rand2 = rand::thread_rng().gen_range(0..genome_size);
+        }
+
+        //Swap
+        let temp = mutant.genome[rand1];
+        mutant.genome[rand1] = mutant.genome[rand2];
+        mutant.genome[rand2] = temp;
+
+        //Calculate fitness
+        mutant.score = fitness(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+
+        mutant
     }
 
     //Scramble Mutation
