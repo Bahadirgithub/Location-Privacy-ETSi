@@ -9,10 +9,10 @@ import random
 from copy import copy
 from tqdm import tqdm
 from datetime import datetime
+import matplotlib as plt
 
-
-
-
+f1_scores_trip = []
+f1_scores_wallet = []
 
 
 #returns the avg. percentage of correct transactions in trips
@@ -31,59 +31,63 @@ def challengerTrips():
             tripList.append(ids)
 
     #compare the attacker trips with the challenger trips
-    for trip in tqdm(root_attackere[0], desc="Challenger Trips"): 
-        k = 0
+    for trip in tqdm(root_attacker[0], desc="Challenger Trips"):
         str_list = trip.attrib['ids'].split(' ')
         usedTrips = set(map(int, str_list))
 
+        best_f1_for_this_trip = 0.0
+
         #find the best trip where the percentage is the highest 
-        for i in range(0, len(tripList)):
-            ids  =  tripList[i]
+        for true_trip in tripList:
+            #Build intersection
+            intersection = len(usedTrips & true_trip)
 
-            # use Jaccard index to compare the trips
-            ktemp = len(usedTrips&ids) / float(len(usedTrips|ids)) * 100
-            
-            if ktemp>k:
-                k = ktemp
-            if k == 100:
-                break
+            # F1 formula: 2 * Intersection / Sum
+            if intersection > 0:
+                current_f1 = (2.0 * intersection) / (len(usedTrips) + len(true_trip))
 
-        per.add(k)  
-    #print("Trips %:",  round(sum(per) / len(per),2))  
-    return (round(sum(per) / len(per),2))
+                if current_f1 > best_f1_for_this_trip:
+                    best_f1_for_this_trip = current_f1
+
+        f1_scores_trip.append(best_f1_for_this_trip)
+
+    #Average best f1 scores
+    return round((sum(f1_scores_trip) / len(f1_scores_trip)) * 100,2)
+
+
 
 #returns the avg. percentage of correct transactions in wallets
 def challengerWallets():
-    
-    per = [] #list with the success percentage of the wallets
     walletList =  [] #list with sets, the sets cotain the wallet ids
 
     #create a list with a sets with ids from wallets
     for i in root_challenger_knowlege.iter('wallet'):
-
             ids=set([])  
             for j in i.iter('wallet_transaction'):
                 ids.add(int(j.attrib['id']))
             walletList.append(ids)
 
-     #compare the attacker trips with the challenger trips
-    for trip in tqdm(root_attackere[1], desc="Challenger Walltes"): 
-        k = 0
-        str_list = trip.attrib['ids'].split(' ')
-        usedTrips = set(map(int, str_list))
+    #compare the attacker trips with the challenger trips
+    for wallet in tqdm(root_attacker[1], desc="Challenger Wallets"):
+        str_list = wallet.attrib['ids'].split(' ')
+        usedWallets = set(map(int, str_list))
 
-        #find the best wallet for the attacker wallet
-        for i in range(0, len(walletList)):
+        best_f1_for_this_wallet = 0.0
 
-            ids  =  walletList[i]
-            
-            # use Jaccard index
-            ktemp = len(usedTrips & ids) / float(len(usedTrips | ids)) * 100
-            if ktemp>k:
-                k = ktemp
-        per.append(k)  
-    
-    return (round(sum(per) / len(per),2))   
+        for true_wallet in walletList:
+            intersection = len(usedWallets & true_wallet)
+
+            if intersection > 0:
+                #F1 formula
+                current_f1 = (2.0 * intersection) / (len(usedWallets) + len(true_wallet))
+
+                if current_f1 > best_f1_for_this_wallet:
+                    best_f1_for_this_wallet = current_f1
+
+        f1_scores_wallet.append(best_f1_for_this_wallet)
+
+    # Average best f1 scores
+    return round((sum(f1_scores_wallet) / len(f1_scores_wallet)) * 100, 2)
     
     
 
@@ -98,14 +102,29 @@ def report():
     f.write('Evaluation started at        ' + str(rep_start) +'\n')
     f.write('Evaluation ended at          ' + str(rep_end) +'\n')
     f.write('Runtime:                     ' + str(time1 - time0) + '\n\n')
-    f.write('Measure of success:     Correctly assigned transactions to wallets or trips with Jaccard index' +"\n")
-    f.write('Number of transactions: ' + str(rep_transactions) + '\n')
 
+    f.write('Measure of success:     Correctly assigned transactions to wallets or trips with Dice-Sørensen coefficient (F1-Score)' +"\n")
+    f.write('Number of transactions: ' + str(rep_transactions) + '\n')
     f.write('Challenger knowledge file is   ' + "'" + knowledge_file_name + "'\n")
     f.write('- of file size                 ' + str(os.path.getsize(knowledge_file_name)) + ' bytes\n\n')
 
     f.write('Avg. percentage of right transactions in trips: ' + str(resultTrips) + '%.\n\n')
     f.write('Avg. percentage of right transactions in wallets: ' + str(resultWallets) + '%.\n\n')
+
+    # F1-Scores
+    min_f1_trip = min(f1_scores_trip)
+    max_f1_trip = max(f1_scores_trip)
+    avg_f1_trip = sum(f1_scores_trip) / len(f1_scores_trip)
+    f.write(f'Minimum F1-Score for Trips: {min_f1_trip:.2f}%\n')
+    f.write(f'Maximum F1-Score for Trips: {max_f1_trip:.2f}%\n')
+    f.write(f'Average F1-Score for Trips: {avg_f1_trip:.2f}%\n\n')
+
+    min_f1_wallet = min(f1_scores_trip)
+    max_f1_wallet = max(f1_scores_trip)
+    avg_f1_wallet = sum(f1_scores_trip) / len(f1_scores_trip)
+    f.write(f'Minimum F1-Score for Wallets: {min_f1_wallet:.2f}%\n')
+    f.write(f'Maximum F1-Score for Wallets: {max_f1_wallet:.2f}%\n')
+    f.write(f'Average F1-Score for Wallets: {avg_f1_wallet:.2f}%\n')
     
     f.write('-------------------- END of report --------------------\n\n')
     print('Report written to ' + "'" + 'reports/' + rep_name + "'")
@@ -122,14 +141,14 @@ def get_options():
     return parser.parse_args()
 
 def main():
-    global root_challenger_knowlege, root_attackere, resultTrips, resultWallets, rep_transactions
+    global root_challenger_knowlege, root_attacker, resultTrips, resultWallets, rep_transactions
    
     tree_challenger_knowlege = ET.parse(str(knowledge_file_name))
     root_challenger_knowlege = tree_challenger_knowlege.getroot()
    
 
     tree_attacker = ET.parse(str(eval_file_name))
-    root_attackere = tree_attacker.getroot()
+    root_attacker = tree_attacker.getroot()
     resultTrips = challengerTrips()
     resultWallets =challengerWallets()
 
