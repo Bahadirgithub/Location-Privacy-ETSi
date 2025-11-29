@@ -3,13 +3,14 @@ import os
 import sys
 import time
 import networkx as nx
+import numpy as np
 from lxml import etree
 import xml.etree.ElementTree as ET
 import random
 from copy import copy
 from tqdm import tqdm
 from datetime import datetime
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 f1_scores_trip = []
 f1_scores_wallet = []
@@ -93,7 +94,7 @@ def challengerWallets():
 
 
 # Write report file
-def report():
+def report(detailed):
     time1 = time.time()
     rep_end = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     f = open('reports/' + rep_name, 'a')
@@ -125,11 +126,97 @@ def report():
     f.write(f'Minimum F1-Score for Wallets: {min_f1_wallet:.2f}%\n')
     f.write(f'Maximum F1-Score for Wallets: {max_f1_wallet:.2f}%\n')
     f.write(f'Average F1-Score for Wallets: {avg_f1_wallet:.2f}%\n')
+
+    if detailed:
+        f.write('\n-------------------- START of Detailed Report --------------------\n')
+        detailed_report(f)
     
     f.write('-------------------- END of report --------------------\n\n')
     print('Report written to ' + "'" + 'reports/' + rep_name + "'")
 
 
+def detailed_report(f):
+    best_trip_score = max(f1_scores_trip)
+    worst_trip_score = min(f1_scores_trip)
+    best_wallet_score = max(f1_scores_wallet)
+    worst_wallet_score = min(f1_scores_wallet)
+
+    best_trip_idx = f1_scores_trip.index(best_trip_score)
+    worst_trip_idx = f1_scores_trip.index(worst_trip_score)
+    best_wallet_idx = f1_scores_wallet.index(best_wallet_score)
+    worst_wallet_idx = f1_scores_wallet.index(worst_wallet_score)
+
+    # Prepare detailed report
+    f.write('\n-------------------- Best and Worst Matching Trips --------------------\n')
+
+    # Best Trip
+    best_trip_ids = root_attacker[0][best_trip_idx].attrib["ids"].split()
+
+    f.write(f'Best Matching Trip (ID {best_trip_idx})\n')
+    f.write(f'F1 Score: {round(best_trip_score * 100, 2)}%\n')
+    f.write(f'Length of Trip: {len(best_trip_ids)} transactions\n')  # Hier die Länge der Liste nehmen
+    f.write(f'IDs: {", ".join(best_trip_ids)}\n')
+
+    # Worst Trip
+    worst_trip_ids = root_attacker[0][worst_trip_idx].attrib["ids"].split()
+
+    f.write(f'\nWorst Matching Trip (ID {worst_trip_idx})\n')
+    f.write(f'F1 Score: {round(worst_trip_score * 100, 2)}%\n')
+    f.write(f'Length of Trip: {len(worst_trip_ids)} transactions\n')
+    f.write(f'IDs: {", ".join(worst_trip_ids)}\n')
+
+    f.write('\n-------------------- Best and Worst Matching Wallets --------------------\n')
+
+    # Best Wallet
+    best_wallet_ids = root_attacker[1][best_wallet_idx].attrib["ids"].split()
+
+    f.write(f'Best Matching Wallet (ID {best_wallet_idx})\n')
+    f.write(f'F1 Score: {round(best_wallet_score * 100, 2)}%\n')
+    f.write(f'Length of Wallet: {len(best_wallet_ids)} transactions\n')
+    f.write(f'IDs: {", ".join(best_wallet_ids)}\n')
+
+    # Worst Wallet
+    worst_wallet_ids = root_attacker[1][worst_wallet_idx].attrib["ids"].split()
+
+    f.write(f'\nWorst Matching Wallet (ID {worst_wallet_idx})\n')
+    f.write(f'F1 Score: {round(worst_wallet_score * 100, 2)}%\n')
+    f.write(f'Length of Wallet: {len(worst_wallet_ids)} transactions\n')
+    f.write(f'IDs: {", ".join(worst_wallet_ids)}\n')
+
+    f.write('-------------------- END of Detailed Report --------------------\n')
+
+def plot():
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # Plot F1-scores for trips
+    ax1.hist(f1_scores_trip, bins=50, alpha=0.7, label='F1-Score for Trips', color='skyblue', edgecolor='black',
+             linewidth=1.2)
+    ax1.set_xlabel("F1-Score", fontsize=12)
+    ax1.set_ylabel("Frequency (Trips)", fontsize=12)
+    ax1.set_title("Distribution of F1-Scores for Trips and Wallets", fontsize=14, weight='bold')
+
+    # Set x-axis range (0 to 1)
+    ax1.set_xlim([0, 1])
+
+    # Fine-tune x-axis ticks
+    ax1.set_xticks(np.arange(0, 1.1, 0.1))
+
+    # Create a second y-axis for wallets
+    ax2 = ax1.twinx()
+    ax2.hist(f1_scores_wallet, bins=50, alpha=0.7, label='F1-Score for Wallets', color='salmon', edgecolor='black',
+             linewidth=1.2)
+    ax2.set_ylabel("Frequency (Wallets)", fontsize=12)
+
+    # Legends for both axes
+    ax1.legend(loc='upper right', fontsize=12, title='F1-Scores (Trips)', title_fontsize='13')
+    ax2.legend(loc='upper left', fontsize=12, title='F1-Scores (Wallets)', title_fontsize='13')
+
+    # Add gridlines for better readability
+    ax1.grid(True, linestyle='--', alpha=0.7)
+
+    # Optimize layout for better display
+    plt.tight_layout()
+    plt.show()
 
 # Gets command line arguments using the argparse module
 def get_options():
@@ -138,6 +225,7 @@ def get_options():
     parser.add_argument('-c', '--challenger', dest='knowledge_file_name', type=str, help='Which attacker knowledge file to use?', required=True)
     parser.add_argument('-a', '--attacker', dest='eval_file_name', type=str, help='Set attacker output file', required=True)
     parser.add_argument('-r', '--report', dest='report_name', type=str, help='Set report name', default='report.txt')
+    parser.add_argument('-d', '--detailed', action='store_true', help='Add detailed information about best/worst trips/wallets', default=False)
     return parser.parse_args()
 
 def main():
@@ -175,4 +263,8 @@ if __name__ == "__main__":
     rep_start = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
     main()
-    report()
+    if args.detailed:
+        report(True)
+    else:
+        report(False)
+    plot()
