@@ -6,3 +6,4 @@ sumolib
 tqdm
 traci
 maturin
+matplotlib

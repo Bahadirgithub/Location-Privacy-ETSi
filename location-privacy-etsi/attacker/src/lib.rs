@@ -230,4 +230,10 @@ mod genetic {
         }
         population
     }
+
+    //funktion um fitness von python aus aufzurufen
+    #[pyfunction]
+    fn call_fitness(individual: Vec<u32>, num_wallets: usize, trip_cost: Vec<u32>, sorted_wallets: Vec<u32>) -> f64 {
+        fitness(&individual, num_wallets, &trip_cost, &sorted_wallets)
+    }
 }
