@@ -45,6 +45,36 @@ def generateGraph():
         DG.add_edge(fromDetector, toDetector, avg=avg, min=minTime, max=maxTime)
 
 
+def precompute_lookahead_cache():
+    """
+    Erstellt einen Cache für den schnellen Lookahead.
+    Optimiert: Keine unnötigen Graph-Abfragen mehr.
+    """
+    # 1. Letzte Transaktionszeit pro Detektor ermitteln
+    max_times = {}
+    for det, trans_list in transaction_lookup.items():
+        if trans_list:
+            max_times[det] = trans_list[-1][0]
+
+    lookahead_cache = {}
+
+    # 2. Cache bauen
+    # Wir iterieren über alle Knoten im Graphen. Da 'node' aus DG.nodes() kommt,
+    # müssen wir NICHT prüfen, ob er existiert.
+    for node in DG.nodes():
+        max_future_time = 0
+
+        # out_edges liefert direkt alle Nachbarn
+        for _, neighbor, _ in DG.out_edges(node, data=True):
+            # Nutze .get() für ultraschnellen Zugriff ohne Absturzrisiko
+            t = max_times.get(neighbor, 0)
+            if t > max_future_time:
+                max_future_time = t
+
+        lookahead_cache[node] = max_future_time
+
+    return lookahead_cache
+
 
 
 #find the trips with the best deviation from the avg. times
@@ -57,36 +87,42 @@ def findTrips():
 
     x=0 #used for the agend names
 
+    sorted_indices = sorted(
+        range(len(transactions_attacker_knowlege)),
+        key=lambda k: int(transactions_attacker_knowlege[k].attrib['time'])
+    )
+
+    lookahead_cache = precompute_lookahead_cache()
 
     #go through every transaction, and try to find a possible trip
-    for i in range(0, len(transactions_attacker_knowlege)):
+    for i in sorted_indices:
 
         #startpoint of the trip
-        transaction= transactions_attacker_knowlege[i]
-        first= True
+        transaction = transactions_attacker_knowlege[i]
+        first = True
 
         #string with all detector names, that are used in this trip
-        result = ""        
-       
+        result = ""
+
         #id of the transaction
-        id =  int(transaction.attrib['id'])
+        id = int(transaction.attrib['id'])
 
         #used to start the inner for loop at the right transaction
         inner_start=i
 
-        #only search for a trip if the start transaction was't used before   
+        #only search for a trip if the start transaction was't used before
         if not id in usedTrans:
 
             #get the informations from this startpoint
-            lastDetector = transaction.attrib['detector']      
-            detector = transaction.attrib['detector']   
+            lastDetector = transaction.attrib['detector']
+            detector = transaction.attrib['detector']
             timeTrans = int(transaction.attrib['time'])
             cost = int(transaction.attrib['cost'])
 
             # remember start time
-            timeStart = timeTrans            
+            timeStart = timeTrans
 
-            #was at least one plausible trip edge found  
+            #was at least one plausible trip edge found
             found = False
 
             #local used transaction ids
@@ -100,7 +136,7 @@ def findTrips():
 
             # array with the best deviations
             bestDeltas = []
-           
+
 
             while(True):
 
@@ -114,8 +150,8 @@ def findTrips():
 
                     #calculate time slot we are searching
                     avg = data.get('avg')
-                    min_travel = data.get('min') * 0.8
-                    max_travel = min(data.get('max') * 1.2, 4 * avg)
+                    min_travel = data.get('min') * 0.5
+                    max_travel = min(data.get('max') * 3.0, 300)
 
                     min_time = timeTrans + min_travel
                     max_time = timeTrans + max_travel
@@ -138,6 +174,18 @@ def findTrips():
                             travel_time = timeTrans_inner - timeTrans
                             deltaTemp = abs(avg - travel_time)
 
+                            # Check if the next detector is a dead end.
+                            # If so, deltaTemp will be massively penalized (+1000s) so that we only dial it in an emergency.
+                            next_det = transaction_inner.attrib['detector']
+
+                            last_possible = lookahead_cache.get(next_det, 0)
+
+                            has_continuation = last_possible > timeTrans_inner
+
+                            # Apply punishment unless it's very late in the day (> 80,000s) where trips end naturally
+                            if not has_continuation and timeTrans_inner < 80000:
+                                deltaTemp += 1000
+
                             #save the best deltas
                             if (not found or deltaTemp < bestDeltas[-1][2]):
                                 found = True
@@ -147,32 +195,38 @@ def findTrips():
                                 bestDeltas.sort(key=lambda c: c[2])
 
                                 # cut the array. only the n best trips will be saved
-                                bestDeltas = bestDeltas[0:2]
-                
-                #get out the while loop if no trip was found             
+                                bestDeltas = bestDeltas[0:3]
+
+                #get out the while loop if no trip was found
                 if not found:
                     break
                 else:
-                
+
                     #add the values for the first trip node.
                     if first:
                         result = detector[6:-2] #only saves the edge name
                         first = False
                         locUsed.append(id)
                         usedTrans.add(id)
-                    
-                    #get one random entry from the array with the best values    
-                    outcome = random.randint(0,len(bestDeltas)-1)
-                     
-                    delta = bestDeltas[outcome][2] 
-                    transTemp = bestDeltas[outcome][1]  
+
+                    #Weighted Randomness
+                    #Calculation: Weight = 1 / (delta + 1)^2 | The +1 prevents division by 0
+                    weights = [1 / ((x[2] + 1.0) ** 2) for x in bestDeltas]
+
+                    choice_data = random.choices(bestDeltas, weights=weights, k=1)[0]
+
+                    #get one random entry from the array with the best values
+                    outcome = bestDeltas.index(choice_data)
+
+                    delta = bestDeltas[outcome][2]
+                    transTemp = bestDeltas[outcome][1]
                     inner_start = bestDeltas[outcome][3]
 
-                    #update last the detector                      
-                    lastDetector= transTemp.attrib['detector']  
+                    #update last the detector
+                    lastDetector= transTemp.attrib['detector']
                     t=int(transTemp.attrib['time'])
                     cost2 = int(transTemp.attrib['cost'])
-                    
+
                     #remeber used id
                     k=int(bestDeltas[outcome][0])
                     locUsed.append(k)
@@ -181,32 +235,32 @@ def findTrips():
                     #calculate delta avg.
                     deltaSumArr =  deltaSumArr + [delta]
                     deltaSumAvg=sum(deltaSumArr)/len(deltaSumArr)
-                    
+
                     # remove the lane and e1det
                     result = result + " " + lastDetector[6:-2]
 
                     #update costs
                     cost = cost + cost2
-                    
+
                     #update timestamp from the new detector
                     timeTrans = t
 
                     #reset
-                    delta = -1 
+                    delta = -1
                     found = False
                     bestDeltas = []
-          
-              
 
-            #save trip when no new plausible transaction were found     
-            if result != "":            
+
+
+            #save trip when no new plausible transaction were found
+            if result != "":
                 results.append(Trip("agent"+str(x),timeStart,t, t-timeStart, cost, set(result.split()), locUsed,deltaSumAvg))
                 #update agend number
-                x += 1 
+                x += 1
 
         
     # find the not used transactions and give them a high weight (100 here) -> a high priority to reduce them
-    for l in range(0, len(transactions_attacker_knowlege)):
+    for l in sorted_indices:
        
         transac= transactions_attacker_knowlege[l]    
         id = int(transac.attrib['id'])
