@@ -10,7 +10,7 @@ class PartTimeWorker(Agent):
 
     def __init__(self, vehicle_id, home, work, chores, config):
         super().__init__(vehicle_id, home)
-        self.type = AgentType.PARTTIME
+        self.type = AgentType.PART_TIME
 
         # np.array → list
         if chores is None:

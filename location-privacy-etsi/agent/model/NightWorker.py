@@ -10,7 +10,7 @@ class NightWorker(Agent):
 
     def __init__(self, vehicle_id, home, work, grocery, chores, config):
         super().__init__(vehicle_id, home)
-        self.type = AgentType.NIGHTWORKER
+        self.type = AgentType.NIGHT_WORKER
         self.work = work
         self.grocery = grocery
         self.config = config
