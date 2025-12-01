@@ -1,57 +1,50 @@
 from datetime import timedelta
 import random
-import numpy as np
-
 from model.Agent import Agent
 from model.AgentType import AgentType
 
-
 class PartTimeWorker(Agent):
-
-    def __init__(self, vehicle_id, home, work, chores, config):
+    def __init__(self, vehicle_id, home, work, leisure_locations, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.PART_TIME
 
-        # np.array → list
-        if chores is None:
-            self.chores = []
+        # Renamed 'chores' to 'leisure_locations' for clarity
+        if leisure_locations is None:
+            self.leisure_locations = []
         else:
-            self.chores = list(chores)
+            self.leisure_locations = list(leisure_locations)
 
         self.work = work
         self.config = config
 
-    # Tagesroutine
     def generate_day(self):
         actions = []
 
-        # Falls keine Arbeitszeit definiert ist
         start = self.config['work']['start']
         end = self.config['work']['end']
 
-        # 1) Fahrt zur Arbeit
+        # 1) Drive to work
         self.set_time(start)
-        action1 = self.advance_step(self.work, timedelta(hours=end - start))
+        # Duration calculation
+        work_duration = timedelta(hours=end - start)
+        action1 = self.advance_step(self.work, work_duration)
         actions.append(action1)
 
-        # 2) Zurück nach Hause
+        # 2) Return Home
         action2 = self.advance_step(self.home, timedelta(0))
         actions.append(action2)
 
-        # 3) Chores (falls existent)
-        if self.chores is None or len(self.chores) == 0:
-            self.end_day()
-            return actions
+        # 3) Leisure / Chores
+        if self.leisure_locations:
+            # Pick a random location
+            loc = random.choice(self.leisure_locations)
 
-        # Wähle 1 chore zufällig
-        chore_loc = random.choice(self.chores)
-        stay = random.uniform(
-            self.config['chores']['stay_min'],
-            self.config['chores']['stay_max']
-        )
-        action3 = self.advance_step(chore_loc, timedelta(hours=stay))
-        action4 = self.advance_step(self.home, timedelta(0))
-        actions.extend([action3, action4])
+            # Calculate stay duration using new helper (supports mean/std)
+            stay_duration = self.get_duration(self.config['chores']) # Config key remains 'chores' to match YAML
+
+            action3 = self.advance_step(loc, stay_duration)
+            action4 = self.advance_step(self.home, timedelta(0))
+            actions.extend([action3, action4])
 
         self.end_day()
         return actions

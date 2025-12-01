@@ -1,21 +1,17 @@
 import math
 import random
 from datetime import time, datetime, timedelta
-
-from model.RoutingStep import *
+import numpy as np
 from abc import ABC, abstractmethod
 
-seconds_in_day = 60*60*24
+# Requires RoutingStep to be imported or available in path
+from model.RoutingStep import RoutingStep
 
-
-# This class describes an agent (i.e. a model of some car) with specific demands
-# to a given map and distinct locations. It is abstract and needs a concrete character
-# implementation (e.g. Worker), see AgentType.py
 class Agent(ABC):
-    # Constructor
-    # id: A vehicle ID for the given agent
-    # locations: A list of locations the agent is able to visit
-    # home: A distinct home location
+    """
+    Abstract base class for all vehicle agents.
+    Manages time, location, and route logging.
+    """
     def __init__(self, vehicle_id, home):
         self.id = vehicle_id
         self.home = home
@@ -25,65 +21,114 @@ class Agent(ABC):
         self.current_location = home
         self.trip_ids = []
 
-    # Generate car demand for a given number of days, starting now.
-    # Returns an array of RoutingStep objects.
     def generate_demand(self, number_of_days):
+        """Generate demand for N days starting from a fixed date."""
         output = []
         self.current_location = self.home
+        # Fixed start date as per your original code
         self.start_time = self.current_time = datetime.strptime('2022-02-28 00:00:00', '%Y-%m-%d %H:%M:%S')
         stop_timedate = self.current_time + timedelta(days=number_of_days)
+
         while self.current_time < stop_timedate:
             next_day = self.generate_day()
-            if next_day is not None:
+            if next_day:
                 output.extend(next_day)
         return output
 
-    # Generate a single demand step.
-    # Behavior is implemented by child classes.
     @abstractmethod
     def generate_day(self):
+        """Implementation specific to the agent type (Worker, Freelance, etc.)"""
         pass
 
-    # Advance the agent to a location and print the details.
-    # destination: destination location object
-    # stay_time: time to delay after reaching destination
-    # returns RoutingStep object
     def advance_step(self, destination, stay_time):
+        """
+        Moves the agent to the destination and records the trip.
+        stay_time: timedelta object representing how long they stay at the destination.
+        """
         self.print_route(self.current_time, self.current_location, destination)
-        depart = str(math.floor((self.current_time - self.start_time).total_seconds() /10 ))  # set speed factor to /10 for final simulations
+
+        # Calculate departure time relative to simulation start
+        # NOTE: The /10 factor speeds up the simulation depart times.
+        # Ensure this matches your SUMO config.
+        total_seconds = (self.current_time - self.start_time).total_seconds()
+        depart = str(math.floor(total_seconds / 10))
+
         new_step = RoutingStep(self, depart, self.current_location, destination)
         self.trip_ids.append(new_step.id)
+
         self.current_location = destination
         self.current_time += stay_time
         return new_step
 
-    # --- UTILITY FUNCITONS ---
+    # --- HELPER FUNCTIONS ---
 
-    # Print the routing step which is to be written
+    def set_time(self, time_input):
+        """
+        Sets the current time of the day.
+        Accepts:
+        - float (e.g. 14.5 = 14:30)
+        - datetime.time object
+        """
+        if isinstance(time_input, (float, int)):
+            t = self.time_from_float(float(time_input))
+        elif isinstance(time_input, time):
+            t = time_input
+        else:
+            raise ValueError(f"set_time expects float or datetime.time, got {type(time_input)}")
+
+        # Keep the current date, update the time
+        self.current_time = datetime.combine(self.current_time.date(), t)
+
+    def get_duration(self, config_entry):
+        """
+        Calculates a duration based on config.
+        Supports both Uniform (min/max) and Gaussian (mean/std) distributions.
+        Returns: timedelta
+        """
+        hours = 0.0
+
+        # Option A: Gaussian (Normal) Distribution
+        if 'mean' in config_entry and 'std' in config_entry:
+            val = random.gauss(config_entry['mean'], config_entry['std'])
+            # Ensure we don't get negative time or extremely long times if desired
+            # basic clamping to positive:
+            hours = max(0.1, val)
+
+        # Option B: Uniform Distribution (Min/Max)
+        elif 'stay_min' in config_entry and 'stay_max' in config_entry:
+            hours = random.uniform(config_entry['stay_min'], config_entry['stay_max'])
+
+        # Option C: Fixed time or alternative keys (fallback)
+        elif 'duration' in config_entry:
+            hours = config_entry['duration']
+
+        else:
+            # Default fallback if config is missing keys
+            hours = 1.0
+
+        return self.timedelta_from_float(hours)
+
     def print_route(self, timestamp, start, end):
-        print(self.id + ' at ' + timestamp.strftime('%H:%M:%S') + ': ' + start.edge_id + ' -> ' + end.edge_id)
+        # Using string formatting for cleaner output
+        print(f"{self.id} at {timestamp.strftime('%H:%M:%S')}: {start.edge_id} -> {end.edge_id}")
 
-    # Convert hourly float value to python time
     def time_from_float(self, timefloat):
-        hours = math.floor(timefloat)
+        # Handle overflow (e.g. 24.5 -> 00:30) if necessary,
+        # but usually start times are 0-24.
+        timefloat = timefloat % 24
+        hours = int(math.floor(timefloat))
         minutes = int((timefloat - hours) * 60)
         return time(hours, minutes)
 
-    # Convert hourly float value to python timedelta
     def timedelta_from_float(self, timefloat):
-        hours = math.floor(timefloat)
+        hours = int(math.floor(timefloat))
         minutes = int((timefloat - hours) * 60)
         return timedelta(hours=hours, minutes=minutes)
 
-    # End day and advance to the next one
     def end_day(self):
+        """Moves clock to the start of the next day (00:00)."""
         self.current_time += timedelta(days=1)
-        self.set_time_hm(0, 0)
+        self.current_time = datetime.combine(self.current_time.date(), time(0, 0))
 
-    # Set current time to a time in terms of hours and minutes
-    def set_time_hm(self, h, m):
-        self.set_time_t(time(hour=h, minute=m))
-
-    # Set current time to a python time value
     def set_time_t(self, t):
-        self.current_time = datetime.combine(self.current_time, t)
+        self.current_time = datetime.combine(self.current_time.date(), t)

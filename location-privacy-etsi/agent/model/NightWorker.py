@@ -1,10 +1,7 @@
 from datetime import timedelta
 import random
-import numpy as np
-
 from model.Agent import Agent
 from model.AgentType import AgentType
-
 
 class NightWorker(Agent):
 
@@ -15,7 +12,6 @@ class NightWorker(Agent):
         self.grocery = grocery
         self.config = config
 
-        # np.array → list
         if chores is None:
             self.chores = []
         else:
@@ -24,39 +20,39 @@ class NightWorker(Agent):
     def generate_day(self):
         actions = []
 
-        start = self.config['work']['start']      # z.B. 22 Uhr
-        end = self.config['work']['end']          # z.B. 6 Uhr
+        start = self.config['work']['start']      # e.g., 22.0 (10 PM)
+        end = self.config['work']['end']          # e.g., 6.0 (6 AM)
 
-        # Nachtarbeit über Mitternacht
+        # 1) Night Shift (over midnight)
         self.set_time(start)
-        duration = (24 - start) + end  # korrekt für Über-Mitternacht
-        a1 = self.advance_step(self.work, timedelta(hours=duration))
+
+        # Calculate duration over midnight
+        if end < start:
+            duration_hours = (24 - start) + end
+        else:
+            duration_hours = end - start
+
+        a1 = self.advance_step(self.work, timedelta(hours=duration_hours))
         actions.append(a1)
 
+        # 2) Return Home
         a2 = self.advance_step(self.home, timedelta(0))
         actions.append(a2)
 
-        # Grocery tagsüber
+        # 3) Grocery (Daytime)
         if random.random() < self.config['grocery']['prob']:
-            stay = random.uniform(
-                self.config['grocery']['stay_min'],
-                self.config['grocery']['stay_max']
-            )
-            a3 = self.advance_step(self.grocery, timedelta(hours=stay))
+            stay_duration = self.get_duration(self.config['grocery'])
+            a3 = self.advance_step(self.grocery, stay_duration)
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a3, a4])
 
-        # Chores
-        if self.chores is not None and len(self.chores) > 0:
-            if random.random() < self.config['chores']['prob']:
-                loc = random.choice(self.chores)
-                stay = random.uniform(
-                    self.config['chores']['stay_min'],
-                    self.config['chores']['stay_max']
-                )
-                a5 = self.advance_step(loc, timedelta(hours=stay))
-                a6 = self.advance_step(self.home, timedelta(0))
-                actions.extend([a5, a6])
+        # 4) Chores
+        if self.chores and (random.random() < self.config['chores']['prob']):
+            loc = random.choice(self.chores)
+            stay_duration = self.get_duration(self.config['chores'])
+            a5 = self.advance_step(loc, stay_duration)
+            a6 = self.advance_step(self.home, timedelta(0))
+            actions.extend([a5, a6])
 
         self.end_day()
         return actions
