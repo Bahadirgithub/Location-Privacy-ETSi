@@ -22,40 +22,56 @@ class Homestay(Agent):
     def generate_day(self):
         actions = []
 
-        # 1) Kids to school
-        if random.random() < self.config['school']['prob']:
-            self.set_time(self.config['school']['time'])
-
-            # Check if config has a specific duration for school dropoff, else 15 mins
-            if 'duration' in self.config['school']:
-                dropoff_time = self.timedelta_from_float(self.config['school']['duration'])
+        # Helper: Startzeit holen (unterstützt mean/std falls in YAML, sonst 'time')
+        def get_start_time(conf):
+            if 'mean' in conf and 'std' in conf:
+                return random.gauss(conf['mean'], conf['std'])
+            elif 'time' in conf:
+                return conf['time']
             else:
-                dropoff_time = timedelta(hours=0.25)
+                return 8.0 # Fallback
 
-            a1 = self.advance_step(self.school, dropoff_time)
+        # 1) Kinder zur Schule
+        if random.random() < self.config['school']['prob']:
+            start_time = get_start_time(self.config['school'])
+            self.set_time(start_time)
+
+            # Dauer des "Abgebens" (Drop-off) statistisch berechnen
+            dropoff_duration = self.get_duration(self.config['school'])
+
+            a1 = self.advance_step(self.school, dropoff_duration)
             a2 = self.advance_step(self.home, timedelta(0))
             actions.extend([a1, a2])
 
-        # 2) Grocery
+        # 2) Einkauf
         if random.random() < self.config['grocery']['prob']:
-            self.set_time(self.config['grocery']['time'])
+            start_time = get_start_time(self.config['grocery'])
+            self.set_time(start_time)
+
             stay_duration = self.get_duration(self.config['grocery'])
 
             a3 = self.advance_step(self.grocery, stay_duration)
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a3, a4])
 
-        # 3) Activity
+        # 3) Aktivität
         if random.random() < self.config['activity']['prob']:
-            self.set_time(self.config['activity']['time'])
+            start_time = get_start_time(self.config['activity'])
+            self.set_time(start_time)
+
             stay_duration = self.get_duration(self.config['activity'])
 
             a5 = self.advance_step(self.activity, stay_duration)
             a6 = self.advance_step(self.home, timedelta(0))
             actions.extend([a5, a6])
 
-        # 4) Extra locations
+        # 4) Extra
         if self.extra and (random.random() < self.config['extra']['prob']):
+            # Extra hat oft keine feste Startzeit in YAML, wir nehmen an es passiert nachmittags
+            # oder nutzen eine Logik wie beim Freelancer. Hier einfach random:
+            if 'time' in self.config['extra']:
+                self.set_time(self.config['extra']['time'])
+
             loc = random.choice(self.extra)
             stay_duration = self.get_duration(self.config['extra'])
 

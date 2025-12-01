@@ -20,36 +20,47 @@ class Worker(Agent):
     def generate_day(self):
         actions = []
 
-        # Determine start time (Support Mean/Std or Fixed Range)
-        if 'mean' in self.config['work']:
-            # If using Gaussian for start time
-            start_float = random.gauss(self.config['work']['mean'], self.config['work']['std'])
-            # Simple duration assumption if start is variable, or use fixed end?
-            # Assuming standard 8 hour day if variable start, or calc from config
-            duration = 8.5 # Example default or read from config
-        else:
-            # Fallback to original logic
-            start_float = self.config['work']['start']
-            duration = self.config['work']['end'] - start_float
+        # --- 1. Arbeitsbeginn berechnen (Dynamisch vs. Fest) ---
+        work_conf = self.config['work']
 
+        # Prüfen, ob statistische Verteilung vorliegt
+        if 'mean' in work_conf and 'std' in work_conf:
+            start_float = random.gauss(work_conf['mean'], work_conf['std'])
+        else:
+            start_float = work_conf['start']
+
+        # --- 2. Arbeitsdauer berechnen ---
+        # Wir nehmen die Differenz aus der Config (z.B. 16 - 8 = 8h)
+        # und wenden sie auf die gewürfelte Startzeit an.
+        ref_start = work_conf.get('start', 8.0)
+        ref_end = work_conf.get('end', 16.0)
+        duration_hours = ref_end - ref_start
+
+        # Sicherheitsnetz, falls Config unlogisch ist
+        if duration_hours <= 0:
+            duration_hours = 8.0
+
+        # Startzeit setzen
         self.set_time(start_float)
 
-        # 1) Drive to Work
-        a1 = self.advance_step(self.work, timedelta(hours=duration))
+        # 1) Fahrt zur Arbeit
+        a1 = self.advance_step(self.work, timedelta(hours=duration_hours))
         actions.append(a1)
 
-        # 2) Return home
+        # 2) Rückfahrt nach Hause
         a2 = self.advance_step(self.home, timedelta(0))
         actions.append(a2)
 
-        # 3) Grocery Shopping
+        # 3) Wocheneinkauf (Grocery)
+        # Hier nutzen wir get_duration, das mean/std aus der Config liest
         if random.random() < self.config['grocery']['prob']:
             stay_duration = self.get_duration(self.config['grocery'])
+
             a3 = self.advance_step(self.grocery, stay_duration)
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a3, a4])
 
-        # 4) Optional Errands
+        # 4) Besorgungen (Errands)
         if self.errands:
             if random.random() < self.config['errands']['prob']:
                 loc = random.choice(self.errands)

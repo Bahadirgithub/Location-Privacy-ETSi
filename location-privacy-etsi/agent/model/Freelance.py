@@ -6,8 +6,7 @@ from model.AgentType import AgentType
 
 class Freelance(Agent):
     """
-    Freelance Agent: Arbeitet unabhängig, hat flexible Zeitpläne und erledigt
-    verschiedene Freizeitaktivitäten (Leisure) über den Tag verteilt.
+    Freelance Agent: Arbeitet unabhängig, hat flexible Zeitpläne.
     """
 
     def __init__(self, vehicle_id, home, leisure_locations, config):
@@ -15,7 +14,6 @@ class Freelance(Agent):
         self.type = AgentType.FREELANCE
         self.config = config
 
-        # Sicherstellen, dass Locations als Liste vorliegen
         if leisure_locations is None:
             self.leisure_locations = []
         else:
@@ -24,92 +22,67 @@ class Freelance(Agent):
     def generate_day(self):
         actions = []
 
-        # 1. Prüfen, ob der Agent heute zuhause bleibt
-        # (z.B. Home Office ohne Außentermine)
         if (random.random() < self.config.get('stay_home_prob', 0.0)
                 or not self.leisure_locations):
             self.end_day()
             return []
 
-        # 2. Anzahl der Aktivitäten für heute bestimmen
-        num_activities_min = self.config['activity'].get('num_activities_min', 1)
-        num_activities_max = self.config['activity'].get('num_activities_max', len(self.leisure_locations))
+        # Anzahl Aktivitäten bestimmen
+        act_conf = self.config['activity']
+        num_min = act_conf.get('num_activities_min', 1)
+        num_max = act_conf.get('num_activities_max', len(self.leisure_locations))
+        num_max = max(num_min, num_max) # Safety
 
-        # Sicherstellen, dass max >= min
-        num_activities_max = max(num_activities_min, num_activities_max)
-
-        # Tatsächliche Anzahl (begrenzt durch verfügbare Orte)
-        count = random.randint(num_activities_min, min(num_activities_max, len(self.leisure_locations)))
-
+        count = random.randint(num_min, min(num_max, len(self.leisure_locations)))
         if count == 0:
             self.end_day()
             return []
 
-        # 3. Zufällige Orte auswählen
         todays_locations = random.sample(self.leisure_locations, count)
-
-        # 4. Zeiten für diese Aktivitäten generieren
-        # Wir generieren hier dynamisch Zeiten, damit jeder Tag anders ist.
         todays_schedule = []
 
-        current_time_float = self.config['activity']['time_min']   # z.B. 9.0 (09:00 Uhr)
-        max_time_float = self.config['activity']['time_max']       # z.B. 20.0 (20:00 Uhr)
+        # Zeitfenster für Aktivitäten
+        current_time_float = act_conf.get('time_min', 9.0)
+        max_time_float = act_conf.get('time_max', 20.0)
 
         for i in range(count):
-            remaining_activities = count - i
-            # Puffer von 30 Min (0.5h) pro Aktivität einplanen, damit sie nicht alle am Ende kleben
-            buffer = 0.5 * remaining_activities
-            available_window = max_time_float - current_time_float - buffer
+            remaining = count - i
+            buffer = 0.5 * remaining
+            window = max_time_float - current_time_float - buffer
 
-            if available_window <= 0:
-                # Falls Zeit knapp ist, einfach kleine Schritte machen
+            if window <= 0:
                 start_time = current_time_float + 0.1
             else:
-                # Zufälligen Startpunkt im möglichen Fenster wählen
-                # Wir schieben das Fenster etwas nach vorne durch / remaining_activities
-                step = available_window / remaining_activities
+                step = window / remaining
                 start_time = random.uniform(current_time_float, current_time_float + step)
 
-            # Zeit in Schedule speichern (als datetime.time)
             todays_schedule.append((self.time_from_float(start_time), todays_locations[i]))
-
-            # Zeit für nächsten Loop hochsetzen (mindestens 30 min später)
             current_time_float = start_time + 0.5
 
-        # 5. Trips generieren (Chain oder Einzeln)
-        chain_trips = (
-                random.random() < self.config['activity'].get('chain_trips_prob', 0.0)
-                and count > 1
-        )
+        # Trips ausführen
+        chain_trips = (random.random() < act_conf.get('chain_trips_prob', 0.0) and count > 1)
 
         if not chain_trips:
-            # Separate Trips: Zuhause -> Ziel -> Zuhause
+            # Einzelne Trips
             for activity_time, location in todays_schedule:
                 self.set_time(activity_time)
 
-                # Dauer aus Config (unterstützt jetzt Mean/Std)
-                stay_duration = self.get_duration(self.config['activity'])
+                # WICHTIG: Hier wird nun mean/std für die Dauer verwendet
+                stay_duration = self.get_duration(act_conf)
 
                 a1 = self.advance_step(location, stay_duration)
                 a2 = self.advance_step(self.home, timedelta(0))
                 actions.extend([a1, a2])
-
         else:
-            # Trip-Kette: Zuhause -> Ziel A -> Ziel B ... -> Zuhause
-            # Startzeit ist die Zeit der ersten Aktivität
+            # Trip-Kette
             first_time = todays_schedule[0][0]
             self.set_time(first_time)
 
             for _, location in todays_schedule:
-                stay_duration = self.get_duration(self.config['activity'])
+                stay_duration = self.get_duration(act_conf)
+                actions.append(self.advance_step(location, stay_duration))
 
-                # Fahrt zum Ziel
-                a_loc = self.advance_step(location, stay_duration)
-                actions.append(a_loc)
-
-            # Ganz am Ende zurück nach Hause
-            a_home = self.advance_step(self.home, timedelta(0))
-            actions.append(a_home)
+            actions.append(self.advance_step(self.home, timedelta(0)))
 
         self.end_day()
         return actions
