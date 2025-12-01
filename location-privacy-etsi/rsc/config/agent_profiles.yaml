@@ -1,5 +1,6 @@
 # -------------------------------------------------------------------------
-# agent_profiles.yaml - KORRIGIERTE VERSION MIT EXPLIZITER DAUER
+# agent_profiles.yaml - FINALE VERSION
+# Optimiert für realistische Streuung (Gleitzeit vs. Pünktlichkeit)
 # -------------------------------------------------------------------------
 
 agent_distribution:
@@ -7,111 +8,134 @@ agent_distribution:
   nightworker: 7
   homestay: 8
   freelance: 12
-  # worker (fulltime) Rest
+  # worker (fulltime) ist der Rest auf 100%
 
 agent_profiles:
 
+  # ---------------------------------------------------------
+  # WORKER (Vollzeit)
+  # Szenario: Bürojob mit Gleitzeit
+  # ---------------------------------------------------------
   worker:
     work:
-      # Startzeit & Dauer der Arbeit
-      mean: 8.0        # Durchschnittlicher Start (8:00 Uhr)
-      std: 1.0         # Standardabweichung Start
-      start: 8.0       # Fallback Startzeit
-      end: 16.0        # Fallback Endzeit
-      duration: 8.0    # DAUER: 8 Stunden
+      duration: 8.5    # 8h Arbeit + 30min Pause
+      mean: 8.0        # Ziel: 08:00 Uhr
+      std: 0.75        # Abweichung: +/- 45 Min (Kernzeit-Feeling)
+      start: 8.0       # Fallback
+      end: 16.5
     grocery:
       prob: 0.5
-      duration: 0.75   # DAUER: 45 Min (Basis)
-      mean: 0.75       # Durchschnitt für Statistik
-      std: 0.25
-      stay_min: 0.5
-      stay_max: 1.0
+      duration: 0.75   # 45 Min Einkauf
+      mean: 0.75
+      std: 0.25        # Mal 30 Min, mal 1h
+      stay_min: 0.25
+      stay_max: 1.5
     errands:
       prob: 0.3
-      duration: 1.0    # DAUER: 1 Stunde (Basis)
+      duration: 1.0
       mean: 1.0
       std: 0.5
-      stay_min: 0.5
-      stay_max: 2.0
+      stay_min: 0.25
+      stay_max: 2.5
 
+  # ---------------------------------------------------------
+  # PART TIME (Teilzeit)
+  # Szenario: Sehr flexible Schichten (Gastro, Einzelhandel, Halbtags)
+  # ---------------------------------------------------------
   parttimeworker:
     work:
-      mean: 10.0       # Start um 10:00 Uhr
-      std: 2.0
+      duration: 4.0
+      mean: 10.0       # Schnitt 10 Uhr
+      std: 2.0         # SEHR HOHE Abweichung (+/- 2h): Starten zw. 8 und 12
       start: 10.0
       end: 14.0
-      duration: 4.0    # DAUER: 4 Stunden
     chores:
       prob: 0.6
-      duration: 1.0    # DAUER: 1 Stunde
-      mean: 1.0
-      std: 0.5
-      stay_min: 0.5
-      stay_max: 1.5
-
-  nightworker:
-    work:
-      mean: 22.0       # Start um 22:00 Uhr
-      std: 1.0
-      start: 22.0
-      end: 6.0
-      duration: 8.0    # DAUER: 8 Stunden (über Mitternacht)
-    grocery:
-      prob: 0.5
-      duration: 0.75   # DAUER: 45 Min
-      mean: 0.75
-      std: 0.25
-      stay_min: 0.5
-      stay_max: 1.0
-    chores:
-      prob: 0.4
-      duration: 1.0    # DAUER: 1 Stunde
+      duration: 1.0
       mean: 1.0
       std: 0.5
       stay_min: 0.5
       stay_max: 2.0
 
+  # ---------------------------------------------------------
+  # NIGHT WORKER (Nachtschicht)
+  # Szenario: Fabrik/Sicherheit/Pflege - Relativ pünktlich
+  # ---------------------------------------------------------
+  nightworker:
+    work:
+      duration: 8.0
+      mean: 22.0       # 22:00 Uhr
+      std: 0.25        # GERINGE Abweichung (+/- 15 Min). Schichtübergabe ist strikt!
+      start: 22.0
+      end: 6.0
+    grocery:
+      prob: 0.5
+      duration: 0.75
+      mean: 0.75
+      std: 0.25
+      stay_min: 0.25
+      stay_max: 1.5
+    chores:
+      prob: 0.4
+      duration: 1.0
+      mean: 1.0
+      std: 0.5
+      stay_min: 0.5
+      stay_max: 2.0
+
+  # ---------------------------------------------------------
+  # HOMESTAY (Elternteil)
+  # Szenario: Morgens Schule (strikt), danach flexibel
+  # ---------------------------------------------------------
   homestay:
     school:
-      prob: 1.0        # Geht immer zur Schule (Drop-off)
-      time: 8.0        # Feste Startzeit (oder mean/std hinzufügen)
-      duration: 0.25   # DAUER: 15 Min (Basis)
-      mean: 0.25       # Durchschnitt Drop-off Dauer
-      std: 0.1
+      prob: 1.0        # Täglich
+      duration: 0.2    # ca. 12 Min Drop-off
+      time: 7.8        # 07:48 Uhr (kurz vor 8)
+      mean: 7.8
+      std: 0.1         # SEHR GERING (+/- 6 Min). Schule wartet nicht.
     grocery:
       prob: 0.7
+      duration: 1.0
       time: 10.0
-      duration: 1.0    # DAUER: 1 Stunde
       mean: 1.0
-      std: 0.3
+      std: 0.5         # Einkaufen ist flexibel
       stay_min: 0.5
-      stay_max: 1.5
+      stay_max: 2.0
     activity:
       prob: 0.4
+      duration: 1.5
       time: 15.0
-      duration: 1.5    # DAUER: 1.5 Stunden
       mean: 1.5
       std: 0.5
       stay_min: 1.0
-      stay_max: 2.0
+      stay_max: 3.0
     extra:
       prob: 0.2
-      duration: 1.0    # DAUER: 1 Stunde
+      duration: 1.0
       mean: 1.0
       std: 0.5
       stay_min: 0.5
       stay_max: 2.0
 
+  # ---------------------------------------------------------
+  # FREELANCE (Selbstständig)
+  # Szenario: Komplett flexibel / Home Office Mix
+  # ---------------------------------------------------------
   freelance:
-    stay_home_prob: 0.4
+    stay_home_prob: 0.3
     activity:
       time_min: 9.0
-      time_max: 20.0
+      time_max: 19.0
+
       num_activities_min: 1
       num_activities_max: 3
-      duration: 1.5          # DAUER: 1.5 Stunden (Basis)
-      mean: 1.5              # Durchschnitt pro Aktivität
-      std: 0.5
+
+      duration: 1.5
+      mean: 1.5        # Dauer eines Meetings
+      std: 0.75        # HOHE Abweichung (Meetings dauern oft länger/kürzer)
+
       stay_duration_min: 0.5
-      stay_duration_max: 2.5
-      chain_trips_prob: 0.5
+      stay_duration_max: 3.0
+
+      chain_trips_prob: 0.6
