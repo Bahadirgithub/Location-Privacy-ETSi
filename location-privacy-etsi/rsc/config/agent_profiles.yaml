@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------
-# agent_profiles.yaml - KORRIGIERTE VERSION (Struktur passend zum Code)
+# agent_profiles.yaml - KORRIGIERTE VERSION MIT EXPLIZITER DAUER
 # -------------------------------------------------------------------------
 
 agent_distribution:
@@ -13,20 +13,22 @@ agent_profiles:
 
   worker:
     work:
-      # Startzeit Arbeit
-      mean: 8.0
-      std: 1.0
-      # Damit der Code auch 'start' findet, falls fallback nötig:
-      start: 8.0
-      end: 16.0
+      # Startzeit & Dauer der Arbeit
+      mean: 8.0        # Durchschnittlicher Start (8:00 Uhr)
+      std: 1.0         # Standardabweichung Start
+      start: 8.0       # Fallback Startzeit
+      end: 16.0        # Fallback Endzeit
+      duration: 8.0    # DAUER: 8 Stunden
     grocery:
       prob: 0.5
-      mean: 0.75 # Dauer
+      duration: 0.75   # DAUER: 45 Min (Basis)
+      mean: 0.75       # Durchschnitt für Statistik
       std: 0.25
       stay_min: 0.5
       stay_max: 1.0
     errands:
       prob: 0.3
+      duration: 1.0    # DAUER: 1 Stunde (Basis)
       mean: 1.0
       std: 0.5
       stay_min: 0.5
@@ -34,12 +36,14 @@ agent_profiles:
 
   parttimeworker:
     work:
-      mean: 10.0
+      mean: 10.0       # Start um 10:00 Uhr
       std: 2.0
       start: 10.0
-      end: 14.0 # 4h Arbeit
+      end: 14.0
+      duration: 4.0    # DAUER: 4 Stunden
     chores:
       prob: 0.6
+      duration: 1.0    # DAUER: 1 Stunde
       mean: 1.0
       std: 0.5
       stay_min: 0.5
@@ -47,18 +51,21 @@ agent_profiles:
 
   nightworker:
     work:
-      mean: 22.0 # 22 Uhr Start
+      mean: 22.0       # Start um 22:00 Uhr
       std: 1.0
       start: 22.0
-      end: 6.0   # 6 Uhr Ende
+      end: 6.0
+      duration: 8.0    # DAUER: 8 Stunden (über Mitternacht)
     grocery:
       prob: 0.5
+      duration: 0.75   # DAUER: 45 Min
       mean: 0.75
       std: 0.25
       stay_min: 0.5
       stay_max: 1.0
     chores:
       prob: 0.4
+      duration: 1.0    # DAUER: 1 Stunde
       mean: 1.0
       std: 0.5
       stay_min: 0.5
@@ -66,14 +73,15 @@ agent_profiles:
 
   homestay:
     school:
-      prob: 1.0 # Geht immer zur Schule
-      time: 8.0 # Dropoff Zeit
-      mean: 0.25 # Dauer Dropoff
+      prob: 1.0        # Geht immer zur Schule (Drop-off)
+      time: 8.0        # Feste Startzeit (oder mean/std hinzufügen)
+      duration: 0.25   # DAUER: 15 Min (Basis)
+      mean: 0.25       # Durchschnitt Drop-off Dauer
       std: 0.1
-      duration: 0.25
     grocery:
       prob: 0.7
       time: 10.0
+      duration: 1.0    # DAUER: 1 Stunde
       mean: 1.0
       std: 0.3
       stay_min: 0.5
@@ -81,12 +89,14 @@ agent_profiles:
     activity:
       prob: 0.4
       time: 15.0
+      duration: 1.5    # DAUER: 1.5 Stunden
       mean: 1.5
       std: 0.5
       stay_min: 1.0
       stay_max: 2.0
     extra:
       prob: 0.2
+      duration: 1.0    # DAUER: 1 Stunde
       mean: 1.0
       std: 0.5
       stay_min: 0.5
@@ -99,7 +109,8 @@ agent_profiles:
       time_max: 20.0
       num_activities_min: 1
       num_activities_max: 3
-      mean: 1.5 # Dauer pro Aktivität
+      duration: 1.5          # DAUER: 1.5 Stunden (Basis)
+      mean: 1.5              # Durchschnitt pro Aktivität
       std: 0.5
       stay_duration_min: 0.5
       stay_duration_max: 2.5
