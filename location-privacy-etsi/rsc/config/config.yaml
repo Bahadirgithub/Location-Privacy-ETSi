@@ -5,7 +5,7 @@ generation:
   script: agent_generation.py
   inpath: ../rsc/traffic/
   outpath: ../rsc/traffic/
-  agents: 200
+  agents: 20
   days: 1
 
   # --- HINZUGEFÜGT ---
@@ -36,7 +36,7 @@ simulation:
   outpath: ../rsc/knowledge/
   mapin: *map
   sroutesin: *gtripout
-  gui: True
+  gui: False
   junctions: junctions.xml
   detectors: ingolstadt_detectors.add.xml
   tripinfo: tripinfo.xml

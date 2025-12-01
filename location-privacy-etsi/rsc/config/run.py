@@ -58,6 +58,7 @@ def simulate():
     exe += ' --detectors ' + str(simulation.get('detectors'))
     exe += ' --tripinfo ' + str(simulation.get('tripinfo'))
     exe += ' --seed ' + str(simulation.get('seed'))
+    exe += ' --days ' + str(generation.get('days'))
     if not simulation.get('report'):
         exe += ' --no-report '
     exe += ' --reportpath ' + str(simulation.get('reportpath'))
