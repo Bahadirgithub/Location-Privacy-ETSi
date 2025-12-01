@@ -14,7 +14,7 @@ def generate():
     print('\n-- Generation module --')
 
     # Compose command 'exe' and execute it
-    exe = 'cd ' + generation.get('path') + '&& ' + sys.executable + ' ' + generation.get('script')
+    exe = 'cd "' + generation.get('path') + '" && "' + sys.executable + '" ' + generation.get('script')
     exe += ' --inpath ' + str(generation.get('inpath'))
     exe += ' --outpath ' + str(generation.get('outpath'))
     exe += ' --agents ' + str(generation.get('agents'))
@@ -46,7 +46,7 @@ def simulate():
     print('\n-- Simulation module --')
 
     # Compose command 'exe' and execute it
-    exe = 'cd ' + simulation.get('path') + '&& ' + sys.executable + ' ' + simulation.get('simulator')
+    exe = 'cd "' + simulation.get('path') + '" && "' + sys.executable + '" ' + simulation.get('simulator')
     exe += ' --inpath ' + str(simulation.get('inpath'))
     exe += ' --outpath ' + str(simulation.get('outpath'))
     if simulation.get('gui'):
@@ -70,7 +70,7 @@ def attack():
     print('\n-- Attacker module --')
 
     # Compose command 'exe' and execute it
-    exe = 'cd ' + attacker.get('path') + '&& ' + sys.executable + ' ' + attacker.get('attack')
+    exe = 'cd "' + attacker.get('path') + '" && "' + sys.executable + '" ' + attacker.get('attack')
     exe += ' --knowledge ' + attacker.get('input')
     exe += ' --output ' + attacker.get('output')
     exe += ' --report ' + report
@@ -80,7 +80,7 @@ def attackerAdvanced():
     print('\n-- Attacker Advanced module --')
 
     # Compose command 'exe' and execute it
-    exe = 'cd ' + attackerAdvanc.get('path') + '&& ' + sys.executable + ' ' + attackerAdvanc.get('attack')
+    exe = 'cd "' + attackerAdvanc.get('path') + '" && "' + sys.executable + '" ' + attackerAdvanc.get('attack')
     exe += ' --knowledge ' + attackerAdvanc.get('input')
     exe += ' --output ' + attackerAdvanc.get('output')
     exe += ' --report ' + report
@@ -94,7 +94,7 @@ def evaluate():
     print('\n-- Evaluation module --')
 
     # Compose command 'exe' and execute it
-    exe = 'cd ' + eval.get('path') + '&& ' + sys.executable + ' ' + eval.get('evaluator')
+    exe = 'cd "' + eval.get('path') + '" && "' + sys.executable + '" ' + eval.get('evaluator')
     exe += ' --challenger ' + eval.get('challenger')
     exe += ' --attacker ' + eval.get('attacker')
     exe += ' --report ' + report

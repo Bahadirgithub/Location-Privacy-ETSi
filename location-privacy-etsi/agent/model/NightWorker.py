@@ -15,48 +15,53 @@ class NightWorker(Agent):
         self.grocery = grocery
         self.config = config
 
-        # np.array → list
         if chores is None:
             self.chores = []
         else:
             self.chores = list(chores)
 
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
 
-        start = self.config['work']['start']      # z.B. 22 Uhr
-        end = self.config['work']['end']          # z.B. 6 Uhr
+        # 1. Optional Chores BEFORE Work
+        chore_cfg = self.config['weekday_chore']
+        current_time = 0.0
 
-        # Nachtarbeit über Mitternacht
-        self.set_time(start)
-        duration = (24 - start) + end  # korrekt für Über-Mitternacht
-        a1 = self.advance_step(self.work, timedelta(hours=duration))
-        actions.append(a1)
+        if self.chores and random.random() < 0.5:
+            start_chore = random.uniform(chore_cfg['start_min'], chore_cfg['start_max'])
+            duration_chore = random.uniform(chore_cfg['duration_min'], chore_cfg['duration_max'])
 
-        a2 = self.advance_step(self.home, timedelta(0))
-        actions.append(a2)
+            # Fix: set_time_t
+            self.set_time_t(self.time_from_float(start_chore))
 
-        # Grocery tagsüber
-        if random.random() < self.config['grocery']['prob']:
-            stay = random.uniform(
-                self.config['grocery']['stay_min'],
-                self.config['grocery']['stay_max']
-            )
-            a3 = self.advance_step(self.grocery, timedelta(hours=stay))
-            a4 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a3, a4])
+            loc = random.choice(self.chores)
+            a1 = self.advance_step(loc, timedelta(hours=duration_chore))
+            a2 = self.advance_step(self.home, timedelta(0))
+            actions.extend([a1, a2])
 
-        # Chores
-        if self.chores is not None and len(self.chores) > 0:
-            if random.random() < self.config['chores']['prob']:
-                loc = random.choice(self.chores)
-                stay = random.uniform(
-                    self.config['chores']['stay_min'],
-                    self.config['chores']['stay_max']
-                )
-                a5 = self.advance_step(loc, timedelta(hours=stay))
-                a6 = self.advance_step(self.home, timedelta(0))
-                actions.extend([a5, a6])
+            current_time = start_chore + duration_chore
+
+        # 2. Night Work
+        start_work = self._get_gaussian_val('work_start')
+        duration_work = max(1.0, self._get_gaussian_val('work_duration'))
+
+        # Ensure start time is after chore (add buffer)
+        start_work = max(start_work, current_time + 0.5)
+        # Ensure it doesn't crash time object (stay < 24.0 for start)
+        start_work = min(23.99, start_work)
+
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(start_work))
+
+        a_work = self.advance_step(self.work, timedelta(hours=duration_work))
+        actions.append(a_work)
+
+        a_return = self.advance_step(self.home, timedelta(0))
+        actions.append(a_return)
 
         self.end_day()
         return actions

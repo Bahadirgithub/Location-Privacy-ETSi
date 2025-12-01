@@ -11,61 +11,68 @@ class Homestay(Agent):
     def __init__(self, vehicle_id, home, school, grocery, activity, extra_locations, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.HOMESTAY
-
         self.school = school
         self.grocery = grocery
         self.activity = activity
         self.config = config
 
-        # np.array → list
         if extra_locations is None:
             self.extra = []
         else:
             self.extra = list(extra_locations)
 
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
 
-        # 1) Kids to school
-        if random.random() < self.config['school']['prob']:
-            self.set_time(self.config['school']['time'])
-            a1 = self.advance_step(self.school, timedelta(hours=0.25))
-            a2 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a1, a2])
+        # 1. School Dropoff
+        drop_time = self._get_gaussian_val('school_dropoff')
+        drop_time = max(6.0, min(10.0, drop_time))  # Safety clamp
 
-        # 2) Grocery
-        if random.random() < self.config['grocery']['prob']:
-            self.set_time(self.config['grocery']['time'])
-            stay = random.uniform(
-                self.config['grocery']['stay_min'],
-                self.config['grocery']['stay_max']
-            )
-            a3 = self.advance_step(self.grocery, timedelta(hours=stay))
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(drop_time))
+
+        a1 = self.advance_step(self.school, timedelta(minutes=15))
+        a2 = self.advance_step(self.home, timedelta(0))
+        actions.extend([a1, a2])
+
+        current_time = drop_time + 0.25
+
+        # 2. Grocery (Mid-day)
+        if random.random() < 0.5:
+            shop_start = max(current_time + 1.0, random.gauss(10.0, 1.0))
+            shop_dur = self._get_gaussian_val('grocery_duration')
+
+            # Fix: set_time_t
+            self.set_time_t(self.time_from_float(shop_start))
+
+            a3 = self.advance_step(self.grocery, timedelta(hours=shop_dur))
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a3, a4])
 
-        # 3) Activity
-        if random.random() < self.config['activity']['prob']:
-            self.set_time(self.config['activity']['time'])
-            stay = random.uniform(
-                self.config['activity']['stay_min'],
-                self.config['activity']['stay_max']
-            )
-            a5 = self.advance_step(self.activity, timedelta(hours=stay))
-            a6 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a5, a6])
+        # 3. School Pickup
+        pick_time = self._get_gaussian_val('school_pickup')
+        if pick_time <= current_time:
+            pick_time = current_time + 3.0
 
-        # 4) Extra locations
-        if self.extra is not None and len(self.extra) > 0:
-            if random.random() < self.config['extra']['prob']:
-                loc = random.choice(self.extra)
-                stay = random.uniform(
-                    self.config['extra']['stay_min'],
-                    self.config['extra']['stay_max']
-                )
-                a7 = self.advance_step(loc, timedelta(hours=stay))
-                a8 = self.advance_step(self.home, timedelta(0))
-                actions.extend([a7, a8])
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(pick_time))
+
+        a5 = self.advance_step(self.school, timedelta(minutes=15))
+        actions.append(a5)
+
+        # 4. Activity
+        if self.activity and random.random() < 0.6:
+            act_dur = self._get_gaussian_val('activity_duration')
+            a6 = self.advance_step(self.activity, timedelta(hours=act_dur))
+            actions.append(a6)
+
+        # Return Home
+        a7 = self.advance_step(self.home, timedelta(0))
+        actions.append(a7)
 
         self.end_day()
         return actions

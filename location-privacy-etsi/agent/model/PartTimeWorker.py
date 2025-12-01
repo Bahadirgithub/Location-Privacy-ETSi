@@ -12,7 +12,6 @@ class PartTimeWorker(Agent):
         super().__init__(vehicle_id, home)
         self.type = AgentType.PART_TIME
 
-        # np.array → list
         if chores is None:
             self.chores = []
         else:
@@ -21,37 +20,58 @@ class PartTimeWorker(Agent):
         self.work = work
         self.config = config
 
-    # Tagesroutine
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
 
-        # Falls keine Arbeitszeit definiert ist
-        start = self.config['work']['start']
-        end = self.config['work']['end']
+        # Calculate probability based on average work days
+        avg_days = sum(self.config['work_days_choices']) / len(self.config['work_days_choices'])
+        work_prob = avg_days / 7.0
 
-        # 1) Fahrt zur Arbeit
-        self.set_time(start)
-        action1 = self.advance_step(self.work, timedelta(hours=end - start))
-        actions.append(action1)
+        if random.random() < work_prob:
+            # --- WORK DAY ---
+            start_hour = self._get_gaussian_val('work_start')
+            duration_hour = max(0.5, self._get_gaussian_val('work_duration'))
 
-        # 2) Zurück nach Hause
-        action2 = self.advance_step(self.home, timedelta(0))
-        actions.append(action2)
+            # Clamp and set time
+            start_hour = max(0.0, min(23.99, start_hour))
+            self.set_time_t(self.time_from_float(start_hour))
 
-        # 3) Chores (falls existent)
-        if self.chores is None or len(self.chores) == 0:
-            self.end_day()
-            return actions
+            # Drive to work
+            a1 = self.advance_step(self.work, timedelta(hours=duration_hour))
+            actions.append(a1)
 
-        # Wähle 1 chore zufällig
-        chore_loc = random.choice(self.chores)
-        stay = random.uniform(
-            self.config['chores']['stay_min'],
-            self.config['chores']['stay_max']
-        )
-        action3 = self.advance_step(chore_loc, timedelta(hours=stay))
-        action4 = self.advance_step(self.home, timedelta(0))
-        actions.extend([action3, action4])
+            # Return home
+            a2 = self.advance_step(self.home, timedelta(0))
+            actions.append(a2)
+
+        else:
+            # --- DAY OFF ---
+            day_off_cfg = self.config['day_off']
+
+            num_activities = random.randint(
+                day_off_cfg['num_activities_min'],
+                day_off_cfg['num_activities_max']
+            )
+
+            if self.chores and num_activities > 0:
+                chore_loc = random.choice(self.chores)
+
+                # Random start time (10 AM - 4 PM)
+                start_hour = random.uniform(10.0, 16.0)
+                self.set_time_t(self.time_from_float(start_hour))
+
+                stay = random.uniform(
+                    day_off_cfg['stay_duration_min'],
+                    day_off_cfg['stay_duration_max']
+                )
+
+                a1 = self.advance_step(chore_loc, timedelta(hours=stay))
+                a2 = self.advance_step(self.home, timedelta(0))
+                actions.extend([a1, a2])
 
         self.end_day()
         return actions

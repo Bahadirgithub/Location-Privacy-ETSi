@@ -15,48 +15,52 @@ class Worker(Agent):
         self.grocery = grocery
         self.config = config
 
-        # np.array → list
         if errands is None:
             self.errands = []
         else:
             self.errands = list(errands)
 
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
 
-        start = self.config['work']['start']
-        end = self.config['work']['end']
+        # 1. Work Routine
+        start_hour = self._get_gaussian_val('work_start')
+        duration_hour = max(1.0, self._get_gaussian_val('work_duration'))
 
-        # 1) Work start
-        self.set_time(start)
-        a1 = self.advance_step(self.work, timedelta(hours=end - start))
+        # Clamp start time (e.g. 5 AM to 12 PM)
+        start_hour = max(5.0, min(12.0, start_hour))
+
+        # Fix: use set_time_t with converter
+        self.set_time_t(self.time_from_float(start_hour))
+
+        a1 = self.advance_step(self.work, timedelta(hours=duration_hour))
         actions.append(a1)
 
-        # 2) Return home
-        a2 = self.advance_step(self.home, timedelta(0))
-        actions.append(a2)
+        # 2. Optional Weekday Chore
+        chore_prob = self.config.get('weekday_chore_on_way_home_prob', 0.0)
 
-        # 3) Grocery
-        if random.random() < self.config['grocery']['prob']:
-            stay = random.uniform(
-                self.config['grocery']['stay_min'],
-                self.config['grocery']['stay_max']
-            )
-            a3 = self.advance_step(self.grocery, timedelta(hours=stay))
-            a4 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a3, a4])
+        if (self.errands or self.grocery) and random.random() < chore_prob:
+            chore_cfg = self.config['weekday_chore']
 
-        # 4) Optional errands
-        if self.errands is not None and len(self.errands) > 0:
-            if random.random() < self.config['errands']['prob']:
+            if self.grocery and random.random() < 0.7:
+                loc = self.grocery
+            elif self.errands:
                 loc = random.choice(self.errands)
-                stay = random.uniform(
-                    self.config['errands']['stay_min'],
-                    self.config['errands']['stay_max']
-                )
-                a5 = self.advance_step(loc, timedelta(hours=stay))
-                a6 = self.advance_step(self.home, timedelta(0))
-                actions.extend([a5, a6])
+            else:
+                loc = self.grocery
+
+            if loc:
+                stay = random.uniform(chore_cfg['duration_min'], chore_cfg['duration_max'])
+                a_chore = self.advance_step(loc, timedelta(hours=stay))
+                actions.append(a_chore)
+
+        # 3. Return Home
+        a_home = self.advance_step(self.home, timedelta(0))
+        actions.append(a_home)
 
         self.end_day()
         return actions

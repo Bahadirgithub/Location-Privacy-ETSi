@@ -36,7 +36,7 @@ simulation:
   outpath: ../rsc/knowledge/
   mapin: *map
   sroutesin: *gtripout
-  gui: False
+  gui: True
   junctions: junctions.xml
   detectors: ingolstadt_detectors.add.xml
   tripinfo: tripinfo.xml
