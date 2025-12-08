@@ -82,12 +82,14 @@ mod genetic {
 
 
     //Tournament Selection
-    fn selection(population: Vec<Individual>, tournament_num:usize, tournament_size:usize) -> Vec<Individual>{
+    fn selection(population: Vec<Individual>, tournament_num:usize, tournament_size:usize, selection_size: usize) -> Vec<Individual>{
         //https://www.baeldung.com/cs/ga-tournament-selection
         //https://cratecode.com/info/genetic-algorithms-selection-techniques
         let mut result = Vec::new();
 
-        for _ in 0..tournament_num {
+        result = apply_elitism(population.clone(), selection_size); // Keep the best individuals from last generation
+
+        for _ in selection_size..tournament_num {
             //Select a random subset from population
             let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
 
@@ -177,6 +179,22 @@ mod genetic {
         mutant
     }
 
+    //Elitism
+    fn apply_elitism(mut population: Vec<Individual>, selection_size: usize) -> Vec<Individual>{
+        //https://www.woodruff.dev/day-12-genetic-algorithms-elitism-for-evolution-survival-of-the-fittest/
+        let mut result = Vec::new();
+
+        //https://rust-lang-nursery.github.io/rust-cookbook/algorithms/sorting.html
+        population.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap()); // sort descending based on score
+
+        for i in 0..selection_size {
+            println!("{}", population[i].score);
+            result.push(population[i].clone());
+        }
+
+        result
+    }
+
     //Main Function
     #[pyfunction]
     fn main(generations: usize,p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
@@ -202,7 +220,7 @@ mod genetic {
                 return population;  // If best score (1.0) is reached exit the main loop
             }
 
-            let parents = selection(population, population_size as usize, 7);
+            let parents = selection(population, population_size as usize, 7, 4);
 
             let mut next_generation: Vec<Individual> = Vec::new();
             for j in (0..parents.len()).step_by(2){
