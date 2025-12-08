@@ -198,6 +198,10 @@ mod genetic {
             let best_score = best_individual.score;
             println!("Generation {}: Best score is {}", i, best_score);
 
+            if best_score == 1.0{
+                return population;  // If best score (1.0) is reached exit the main loop
+            }
+
             let parents = selection(population, population_size as usize, 7);
 
             let mut next_generation: Vec<Individual> = Vec::new();
