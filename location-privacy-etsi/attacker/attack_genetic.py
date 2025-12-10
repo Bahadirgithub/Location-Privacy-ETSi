@@ -76,9 +76,7 @@ def precompute_lookahead_cache():
     return lookahead_cache
 
 
-
 #find the trips with the best deviation from the avg. times
-
 def findTrips():
 
     lastDetector = ""
@@ -250,8 +248,6 @@ def findTrips():
                     found = False
                     bestDeltas = []
 
-
-
             #save trip when no new plausible transaction were found
             if result != "":
                 results.append(Trip("agent"+str(x),timeStart,t, t-timeStart, cost, set(result.split()), locUsed,deltaSumAvg))
@@ -272,161 +268,8 @@ def findTrips():
             x += 1
     #sort results. worst deltaSum first     
     results.sort(key = lambda c: c.deltaSum, reverse=True)
-    
-# Genetische Funktion:
-
-#Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
-# -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
 
 POPULATION_SIZE = 500
-
-
-
-#compares trips and combines them if they are mostly equal. sum < min (wallet costs). if a trip has the sum of the min sum try to fill the next
-def compareTripsMin():
-    #first limit, percentage should be higher as minlim to combine them in the first iteration
-    minlim=40 
-    #how often we iterated with minlim 0    
-    zero = 0
-    #tqdm manual    
-    pbar = tqdm(total=len(results), desc="Generate Wallets")
-    #sort wallets
-    walletCosts.sort()
-    #index
-    pos = 0
-     
-    while(len(results) != len(walletCosts)):
-        
-        results.sort(key = lambda c: c.cost)
-        tripA = ""
-        tripB = ""
-        #find for each trip the best trip with the best similarity
-        for i, trip in enumerate(results):
-            
-            listA = trip.trip
-            x=0
-            v = 0
-            for j  in range(v,len(results)):
-                trip2=results[j]
-                v = j
-                if i != j:    
-                    #split the trip string into a set
-                    listB = trip2.trip
-                    #create a list backwards
-                    backwardsListB = backwards(listB)
-                    #caluclate the similarity between the 2 trips, with Jaccard index
-                    k = len(listA & listB) / float(len(listA|listB)) * 100
-                    kBack = len(listA &  backwardsListB) / float(len(listA | backwardsListB)) * 100
-                    #remeber the better trip
-                    if (x < k or x < kBack) and (trip.cost+trip2.cost <= walletCosts[pos] or (zero > 0 and trip == results[0])):
-                        tripA = trip
-                        tripB = trip2
-                        x = max(k,kBack)
-            #only copy the best trip         
-            if x > minlim:
-
-                if len(results) == len(walletCosts):
-                    break
-
-                if tripA.cost+tripB.cost == walletCosts[pos]:
-                        pos = pos+1
-                
-                copyTrip(tripA,tripB) 
-
-            pbar.update(1)
-
-        if len(results) == len(walletCosts):
-                    break  
-        #reduce the limit 
-        minlim = max(minlim-20,0)
-        
-        if minlim == 0:
-            zero += 1
-            if zero > 3:
-                
-                break   
-    zero = 0        
-    pbar.close()
-
-
-#compares trips and combines them if they are mostly equal. sum < max(wallet costs)
-def compareTripsMax():
-    #first limit, percentage should be higher as minlim to combine them in the first iteration
-    minlim=60
-    #how often we iterated with minlim 0    
-    zero = 0    
-    pbar = tqdm(total=len(results))
-    while(len(results) != len(walletCosts)):
-        x = 0
-        results.sort(key = lambda c: c.cost)
-        tripA = ""
-        tripB = ""
-
-        for trip in results:
-           
-            listA = trip.trip
-            x=0
-            for trip2 in results:
-                
-                if trip != trip2:    
-                    
-                    listB = trip2.trip
-                    backwardsListB = backwards(listB)
-                    k = len(listA & listB) / float(len(listA|listB)) * 100
-                    kBack = len(listA &  backwardsListB) / float(len(listA | backwardsListB)) * 100
-                    if (x < k or x < kBack) and (trip.cost+trip2.cost <= max(walletCosts) or (zero > 0 and trip == results[0])):
-                        tripA = trip
-                        tripB = trip2
-                        x = max(k,kBack)
-                        
-            if x > minlim:
-                if len(results) == len(walletCosts):
-                    break
-                copyTrip(tripA,tripB) 
-            pbar.update(1)
-
-        minlim = max(minlim-20,0)
-        if len(results) == len(walletCosts):
-                    break  
-        if minlim == 0:
-            zero += 1
-            if zero > 3:
-                
-                break   
-    zero = 0        
-    pbar.close()
-
-
-#compares the trips and tries to add them up to reach the wallet sums
-def compareTripsSum():
-    
-    #tqdm manual    
-    pbar = tqdm(total=len(results))
-    #sort wallets, try to fill the wallets with the lowest cost first
-    walletCosts.sort()
-      
-        
-    for k, wallet in enumerate(walletCosts):
-
-        results.sort(key = lambda c: c.cost,reverse=True)        
-        
-        trip = results[k]
-
-        x = k+1
-        #combine them
-        while trip.cost != wallet and  x < len(results)-1 and len(results) > len(walletCosts):
-             
-            for j in range(k+1,len(results)):
-                trip2 = results[j]
-                x=j
-                if trip != trip2:    
-                    
-                    #save the better trip
-                    if trip.cost+trip2.cost <= wallet :
-                        copyTrip(trip,trip2)
-                        break
-            pbar.update(1)
-    pbar.close()
 
 #returns an array backwards
 def backwards(array):
@@ -471,10 +314,7 @@ def randomTrip():
     results = []
     usedTrans = set([])  
     findTrips() 
-    
-    
-    
-    
+
 #uses the best results with the lowest difference and tries to optimise the routes with simulated annealing
 def simAn():
     global results,usedTrans,annealingResult
@@ -520,8 +360,6 @@ def simAn():
                 d=randomD
     annealingResult = d
 
-
-            
 
 #creates a list with all wallet costs and a list with all result costs
 def create_list():
@@ -590,7 +428,6 @@ def report():
     print('Report written to ' + "'" + 'reports/' + rep_name + "'")
 
 
-
 def main():
     global DG,results,usedTrans,tree_attacker_knowlege,root_attacker_knowlege
     global transactions_attacker_knowlege
@@ -630,19 +467,17 @@ def main():
 
     create_list()
 
-    #Das muss durch genetischen Algorithmus ersetzt werden!
-    #compareTripsMin()
-    #compareTripsSum()
-    #compareTripsMax()
     print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
-    #pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
-
 
     #Generate Trip costs
     trips_cost = []
     for i in range(len(results)):
         trips_cost.append(results[i].cost)
 
+    # Genetische Funktion:
+
+    # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
+    # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
     population = genetic.main(1000, 0.05, 0.02, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
 
     best_individual = max(population, key=lambda ind: ind.score)
@@ -671,8 +506,6 @@ def main():
     tree.write('attacks/' + output_file_name)
    
     print('Finished')
-
-
 
 
 
