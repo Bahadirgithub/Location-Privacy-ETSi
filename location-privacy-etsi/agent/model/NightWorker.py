@@ -1,7 +1,10 @@
 from datetime import timedelta
 import random
+import numpy as np
+
 from model.Agent import Agent
 from model.AgentType import AgentType
+
 
 class NightWorker(Agent):
 
@@ -17,52 +20,48 @@ class NightWorker(Agent):
         else:
             self.chores = list(chores)
 
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
-        work_conf = self.config['work']
 
-        # --- 1. Startzeit (Gauß um 22.0 Uhr) ---
-        if 'mean' in work_conf and 'std' in work_conf:
-            start_float = random.gauss(work_conf['mean'], work_conf['std'])
-        else:
-            start_float = work_conf['start']
+        # 1. Optional Chores BEFORE Work
+        chore_cfg = self.config['weekday_chore']
+        current_time = 0.0
 
-        # --- 2. Dauer über Mitternacht berechnen ---
-        ref_start = work_conf.get('start', 22.0)
-        ref_end = work_conf.get('end', 6.0)
+        if self.chores and random.random() < 0.5:
+            start_chore = random.uniform(chore_cfg['start_min'], chore_cfg['start_max'])
+            duration_chore = random.uniform(chore_cfg['duration_min'], chore_cfg['duration_max'])
 
-        if ref_end < ref_start:
-            # Beispiel: Start 22, Ende 6 -> (24-22) + 6 = 8 Stunden
-            duration_hours = (24.0 - ref_start) + ref_end
-        else:
-            duration_hours = ref_end - ref_start
+            # Fix: set_time_t
+            self.set_time_t(self.time_from_float(start_chore))
 
-        if duration_hours <= 0: duration_hours = 8.0
-
-        self.set_time(start_float)
-
-        # 1) Nachtschicht
-        a1 = self.advance_step(self.work, timedelta(hours=duration_hours))
-        actions.append(a1)
-
-        # 2) Nach Hause
-        a2 = self.advance_step(self.home, timedelta(0))
-        actions.append(a2)
-
-        # 3) Einkaufen (Tagsüber nach Schlaf)
-        if random.random() < self.config['grocery']['prob']:
-            stay_duration = self.get_duration(self.config['grocery'])
-            a3 = self.advance_step(self.grocery, stay_duration)
-            a4 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a3, a4])
-
-        # 4) Erledigungen
-        if self.chores and (random.random() < self.config['chores']['prob']):
             loc = random.choice(self.chores)
-            stay_duration = self.get_duration(self.config['chores'])
-            a5 = self.advance_step(loc, stay_duration)
-            a6 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a5, a6])
+            a1 = self.advance_step(loc, timedelta(hours=duration_chore))
+            a2 = self.advance_step(self.home, timedelta(0))
+            actions.extend([a1, a2])
+
+            current_time = start_chore + duration_chore
+
+        # 2. Night Work
+        start_work = self._get_gaussian_val('work_start')
+        duration_work = max(1.0, self._get_gaussian_val('work_duration'))
+
+        # Ensure start time is after chore (add buffer)
+        start_work = max(start_work, current_time + 0.5)
+        # Ensure it doesn't crash time object (stay < 24.0 for start)
+        start_work = min(23.99, start_work)
+
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(start_work))
+
+        a_work = self.advance_step(self.work, timedelta(hours=duration_work))
+        actions.append(a_work)
+
+        a_return = self.advance_step(self.home, timedelta(0))
+        actions.append(a_return)
 
         self.end_day()
         return actions

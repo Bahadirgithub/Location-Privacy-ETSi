@@ -1,20 +1,20 @@
-from datetime import timedelta, time, datetime
+from datetime import timedelta
 import random
-import math
+import numpy as np
+
 from model.Agent import Agent
 from model.AgentType import AgentType
 
+
 class Freelance(Agent):
-    """
-    Freelance Agent: Arbeitet unabhängig, hat flexible Zeitpläne.
-    """
 
     def __init__(self, vehicle_id, home, leisure_locations, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.FREELANCE
         self.config = config
 
-        if leisure_locations is None:
+        # Handle numpy array or list
+        if leisure_locations is None or len(leisure_locations) == 0:
             self.leisure_locations = []
         else:
             self.leisure_locations = list(leisure_locations)
@@ -22,67 +22,56 @@ class Freelance(Agent):
     def generate_day(self):
         actions = []
 
-        if (random.random() < self.config.get('stay_home_prob', 0.0)
-                or not self.leisure_locations):
+        # 1. Stay Home Check
+        if random.random() < self.config['stay_home_prob']:
             self.end_day()
             return []
 
-        # Anzahl Aktivitäten bestimmen
-        act_conf = self.config['activity']
-        num_min = act_conf.get('num_activities_min', 1)
-        num_max = act_conf.get('num_activities_max', len(self.leisure_locations))
-        num_max = max(num_min, num_max) # Safety
+        # 2. Determine Activities
+        act_config = self.config['activity']
+        num_activities = random.randint(
+            act_config['num_activities_min'],
+            min(act_config['num_activities_max'], len(self.leisure_locations))
+        )
 
-        count = random.randint(num_min, min(num_max, len(self.leisure_locations)))
-        if count == 0:
+        if num_activities == 0:
             self.end_day()
             return []
 
-        todays_locations = random.sample(self.leisure_locations, count)
-        todays_schedule = []
+        # 3. Generate Schedule
+        # Define time window from YAML
+        t_min = act_config['time_min']
+        t_max = act_config['time_max']
 
-        # Zeitfenster für Aktivitäten
-        current_time_float = act_conf.get('time_min', 9.0)
-        max_time_float = act_conf.get('time_max', 20.0)
+        # Select locations
+        todays_locs = random.sample(self.leisure_locations, num_activities)
 
-        for i in range(count):
-            remaining = count - i
-            buffer = 0.5 * remaining
-            window = max_time_float - current_time_float - buffer
+        current_t = t_min
 
-            if window <= 0:
-                start_time = current_time_float + 0.1
-            else:
-                step = window / remaining
-                start_time = random.uniform(current_time_float, current_time_float + step)
+        for loc in todays_locs:
+            # Pick a start time
+            # Simple random logic to spread them out between current_t and t_max
+            # Ensure we have at least 2 hours buffer or similar
+            if current_t >= t_max - 1.0:
+                break
 
-            todays_schedule.append((self.time_from_float(start_time), todays_locations[i]))
-            current_time_float = start_time + 0.5
+            start_t = random.uniform(current_t, t_max - 2.0)
 
-        # Trips ausführen
-        chain_trips = (random.random() < act_conf.get('chain_trips_prob', 0.0) and count > 1)
+            # --- FIX: Use set_time_t with converter ---
+            self.set_time_t(self.time_from_float(start_t))
 
-        if not chain_trips:
-            # Einzelne Trips
-            for activity_time, location in todays_schedule:
-                self.set_time(activity_time)
+            stay_dur = random.uniform(
+                act_config['stay_duration_min'],
+                act_config['stay_duration_max']
+            )
 
-                # WICHTIG: Hier wird nun mean/std für die Dauer verwendet
-                stay_duration = self.get_duration(act_conf)
+            a_loc = self.advance_step(loc, timedelta(hours=stay_dur))
+            a_home = self.advance_step(self.home, timedelta(0))
+            actions.extend([a_loc, a_home])
 
-                a1 = self.advance_step(location, stay_duration)
-                a2 = self.advance_step(self.home, timedelta(0))
-                actions.extend([a1, a2])
-        else:
-            # Trip-Kette
-            first_time = todays_schedule[0][0]
-            self.set_time(first_time)
-
-            for _, location in todays_schedule:
-                stay_duration = self.get_duration(act_conf)
-                actions.append(self.advance_step(location, stay_duration))
-
-            actions.append(self.advance_step(self.home, timedelta(0)))
+            current_t = start_t + stay_dur + 0.5  # Buffer
+            if current_t >= t_max:
+                break
 
         self.end_day()
         return actions

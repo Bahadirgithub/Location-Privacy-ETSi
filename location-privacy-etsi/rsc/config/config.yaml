@@ -5,7 +5,7 @@ generation:
   script: agent_generation.py
   inpath: ../rsc/traffic/
   outpath: ../rsc/traffic/
-  agents: 200
+  agents: 20
   days: 1
 
   # --- HINZUGEFÜGT ---

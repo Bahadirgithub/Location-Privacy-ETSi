@@ -1,14 +1,16 @@
 from datetime import timedelta
 import random
+import numpy as np
+
 from model.Agent import Agent
 from model.AgentType import AgentType
+
 
 class Homestay(Agent):
 
     def __init__(self, vehicle_id, home, school, grocery, activity, extra_locations, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.HOMESTAY
-
         self.school = school
         self.grocery = grocery
         self.activity = activity
@@ -19,65 +21,58 @@ class Homestay(Agent):
         else:
             self.extra = list(extra_locations)
 
+    def _get_gaussian_val(self, key):
+        params = self.config[key]
+        return random.gauss(params['mean'], params['std_dev'])
+
     def generate_day(self):
         actions = []
 
-        # Helper: Startzeit holen (unterstützt mean/std falls in YAML, sonst 'time')
-        def get_start_time(conf):
-            if 'mean' in conf and 'std' in conf:
-                return random.gauss(conf['mean'], conf['std'])
-            elif 'time' in conf:
-                return conf['time']
-            else:
-                return 8.0 # Fallback
+        # 1. School Dropoff
+        drop_time = self._get_gaussian_val('school_dropoff')
+        drop_time = max(6.0, min(10.0, drop_time))  # Safety clamp
 
-        # 1) Kinder zur Schule
-        if random.random() < self.config['school']['prob']:
-            start_time = get_start_time(self.config['school'])
-            self.set_time(start_time)
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(drop_time))
 
-            # Dauer des "Abgebens" (Drop-off) statistisch berechnen
-            dropoff_duration = self.get_duration(self.config['school'])
+        a1 = self.advance_step(self.school, timedelta(minutes=15))
+        a2 = self.advance_step(self.home, timedelta(0))
+        actions.extend([a1, a2])
 
-            a1 = self.advance_step(self.school, dropoff_duration)
-            a2 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a1, a2])
+        current_time = drop_time + 0.25
 
-        # 2) Einkauf
-        if random.random() < self.config['grocery']['prob']:
-            start_time = get_start_time(self.config['grocery'])
-            self.set_time(start_time)
+        # 2. Grocery (Mid-day)
+        if random.random() < 0.5:
+            shop_start = max(current_time + 1.0, random.gauss(10.0, 1.0))
+            shop_dur = self._get_gaussian_val('grocery_duration')
 
-            stay_duration = self.get_duration(self.config['grocery'])
+            # Fix: set_time_t
+            self.set_time_t(self.time_from_float(shop_start))
 
-            a3 = self.advance_step(self.grocery, stay_duration)
+            a3 = self.advance_step(self.grocery, timedelta(hours=shop_dur))
             a4 = self.advance_step(self.home, timedelta(0))
             actions.extend([a3, a4])
 
-        # 3) Aktivität
-        if random.random() < self.config['activity']['prob']:
-            start_time = get_start_time(self.config['activity'])
-            self.set_time(start_time)
+        # 3. School Pickup
+        pick_time = self._get_gaussian_val('school_pickup')
+        if pick_time <= current_time:
+            pick_time = current_time + 3.0
 
-            stay_duration = self.get_duration(self.config['activity'])
+        # Fix: set_time_t
+        self.set_time_t(self.time_from_float(pick_time))
 
-            a5 = self.advance_step(self.activity, stay_duration)
-            a6 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a5, a6])
+        a5 = self.advance_step(self.school, timedelta(minutes=15))
+        actions.append(a5)
 
-        # 4) Extra
-        if self.extra and (random.random() < self.config['extra']['prob']):
-            # Extra hat oft keine feste Startzeit in YAML, wir nehmen an es passiert nachmittags
-            # oder nutzen eine Logik wie beim Freelancer. Hier einfach random:
-            if 'time' in self.config['extra']:
-                self.set_time(self.config['extra']['time'])
+        # 4. Activity
+        if self.activity and random.random() < 0.6:
+            act_dur = self._get_gaussian_val('activity_duration')
+            a6 = self.advance_step(self.activity, timedelta(hours=act_dur))
+            actions.append(a6)
 
-            loc = random.choice(self.extra)
-            stay_duration = self.get_duration(self.config['extra'])
-
-            a7 = self.advance_step(loc, stay_duration)
-            a8 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a7, a8])
+        # Return Home
+        a7 = self.advance_step(self.home, timedelta(0))
+        actions.append(a7)
 
         self.end_day()
         return actions
