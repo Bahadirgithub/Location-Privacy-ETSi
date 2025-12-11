@@ -17,6 +17,37 @@ mod genetic {
         score: f64
     }
 
+    #[pyclass]
+    #[derive(Clone)]
+    struct Trip {
+        #[pyo3(get, set)]
+        id: usize,
+        #[pyo3(get, set)]
+        cost: u32,
+        #[pyo3(get, set)]
+        start_time: u32,
+        #[pyo3(get, set)]
+        end_time: u32,
+        /*
+        #[pyo3(get, set)]
+        start_loc_id: usize,
+        #[pyo3(get, set)]
+        end_loc_id: usize,
+
+         */
+    }
+
+    #[pymethods]
+    impl Trip {
+        #[new]
+        fn new(id: usize, cost: u32, start_time: u32, end_time: u32) -> Self {
+            Trip { id, cost, start_time, end_time }
+        }
+
+        fn __repr__(&self) -> String {
+            format!("Trip(id={}, cost={}, starttime = {}, endtime = {})", self.id, self.cost, self.start_time, self.end_time)
+        }
+    }
 
     #[pymethods]
     impl Individual {
@@ -40,11 +71,13 @@ mod genetic {
         result
     }
 
-    fn fitness(individual: &[u32], num_wallets: usize, trip_cost: &[u32], sorted_wallets: &[u32]) -> f64 {
+    fn fitness(individual: &[u32], num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> f64 {
+        let mut wallets: Vec<Vec<&Trip>> = vec![Vec::new(); num_wallets];
         let mut current_wallet_sums = vec![0u32; num_wallets];
 
         for (trip_id, wallet_id) in individual.iter().enumerate() {
-            let trip_sum = trip_cost[trip_id];
+            let trip_sum = trips[trip_id].cost;
+            wallets[*wallet_id as usize].push(&trips[trip_id]);
             current_wallet_sums[*wallet_id as usize] += trip_sum;
         }
 
@@ -56,11 +89,30 @@ mod genetic {
             total_error += current_wallet_sums[i].abs_diff(sorted_wallets[i]);
         }
 
-        1.0 / (1.0 + (total_error as f64))
+        let mut penalty = 0.0;
+
+        //check for plausibility
+        for wallet_trips in wallets.iter_mut() {
+            if wallet_trips.is_empty() {
+                continue;
+            }
+            wallet_trips.sort_unstable_by_key(|t| t.start_time);
+
+            for i in 0..wallet_trips.len() - 1{
+                let current = wallet_trips[i];
+                let next = wallet_trips[i+1];
+
+                if current.end_time > next.start_time{
+                    penalty += 100.0; //penalty prüfen
+                }
+            }
+        }
+
+        1.0 / (1.0 + ((total_error as f64) + penalty))
    }
 
 
-    fn initial_population(population_size: u32, num_trips: usize, num_wallets: usize, trips_costs: &[u32], sorted_wallets: &[u32]) -> Vec<Individual> {
+    fn initial_population(population_size: u32, num_trips: usize, num_wallets: usize, trips_costs: &[Trip], sorted_wallets: &[u32]) -> Vec<Individual> {
         let mut population = Vec::new();
 
         for _ in 0..population_size {
@@ -106,7 +158,7 @@ mod genetic {
     }
 
     //Two-Point Crossover
-    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> (Individual, Individual){
+    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> (Individual, Individual){
         //https://www.geeksforgeeks.org/machine-learning/crossover-in-genetic-algorithm/
         let genome_size = parent_1.genome.len();
 
@@ -139,7 +191,7 @@ mod genetic {
     }
 
     //Swap Mutation
-    fn mutation_small(mut mutant:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> Individual {
+    fn mutation_small(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
         let genome_size = mutant.genome.len();
 
@@ -162,7 +214,7 @@ mod genetic {
     }
 
     //Scramble Mutation
-    fn mutation_big(mut mutant:Individual, num_wallets:usize, trip_cost:&[u32], sorted_wallets:&[u32]) -> Individual {
+    fn mutation_big(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
         let genome_size = mutant.genome.len();
 
@@ -188,7 +240,6 @@ mod genetic {
         population.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap()); // sort descending based on score
 
         for i in 0..selection_size {
-            println!("{}", population[i].score);
             result.push(population[i].clone());
         }
 
@@ -197,24 +248,27 @@ mod genetic {
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize,p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips_costs: Vec<u32>) -> Vec<Individual>{
+    fn main(generations: usize,p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips: Vec<Trip>) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Init
-        let mut population = initial_population(population_size, num_trips,num_wallets, &trips_costs, &sorted_wallets);
+        let mut population = initial_population(population_size, num_trips,num_wallets, &trips, &sorted_wallets);
 
         //Main Loop
         for i in 0..generations{
 
             //Store best individuals
             let mut best_individual = population[0].clone();
+            let mut population_sum = 0.0;
             for j in 0..population.len(){
                 if population[j].score > best_individual.score{
                     best_individual = population[j].clone();
                 }
+                population_sum += population[j].score;
             }
             let best_score = best_individual.score;
-            println!("Generation {}: Best score is {}", i, best_score);
+            let avg_score = population_sum / (population.len() as f64);
+            println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
 
             if best_score == 1.0{
                 return population;  // If best score (1.0) is reached exit the main loop
@@ -227,22 +281,22 @@ mod genetic {
                 let parent1 = &parents[j];
                 let parent2 = &parents[j + 1];
 
-                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips_costs, &sorted_wallets);
+                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips, &sorted_wallets);
 
                 // Apply small mutation (swap) with probability
                 if rand::random::<f32>() < p_mutation_small {
-                    child1 = mutation_small(child1, num_wallets, &trips_costs, &sorted_wallets);
+                    child1 = mutation_small(child1, num_wallets, &trips, &sorted_wallets);
                 }
                 if rand::random::<f32>() < p_mutation_small {
-                    child2 = mutation_small(child2, num_wallets, &trips_costs, &sorted_wallets);
+                    child2 = mutation_small(child2, num_wallets, &trips, &sorted_wallets);
                 }
 
                 // Apply big mutation (scramble) with probability
                 if rand::random::<f32>() < p_mutation_big {
-                    child1 = mutation_big(child1, num_wallets, &trips_costs, &sorted_wallets);
+                    child1 = mutation_big(child1, num_wallets, &trips, &sorted_wallets);
                 }
                 if rand::random::<f32>() < p_mutation_big {
-                    child2 = mutation_big(child2, num_wallets, &trips_costs, &sorted_wallets);
+                    child2 = mutation_big(child2, num_wallets, &trips, &sorted_wallets);
                 }
 
                 next_generation.push(child1);
@@ -255,7 +309,7 @@ mod genetic {
 
     //funktion um fitness von python aus aufzurufen
     #[pyfunction]
-    fn call_fitness(individual: Vec<u32>, num_wallets: usize, trip_cost: Vec<u32>, sorted_wallets: Vec<u32>) -> f64 {
-        fitness(&individual, num_wallets, &trip_cost, &sorted_wallets)
+    fn call_fitness(individual: Vec<u32>, num_wallets: usize, trips: Vec<Trip>, sorted_wallets: Vec<u32>) -> f64 {
+        fitness(&individual, num_wallets, &trips, &sorted_wallets)
     }
 }

@@ -269,8 +269,6 @@ def findTrips():
     #sort results. worst deltaSum first     
     results.sort(key = lambda c: c.deltaSum, reverse=True)
 
-POPULATION_SIZE = 500
-
 #returns an array backwards
 def backwards(array):
     n = 4
@@ -469,16 +467,25 @@ def main():
 
     print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
 
-    #Generate Trip costs
-    trips_cost = []
+    # Generate Rust Trip Objects
+    rust_trips = []
     for i in range(len(results)):
-        trips_cost.append(results[i].cost)
+        py_trip = results[i]
+
+        rt = genetic.Trip(
+            id=i,
+            cost=int(py_trip.cost),
+            start_time=int(py_trip.timeStart),
+            end_time=int(py_trip.timeEnd),
+        )
+        rust_trips.append(rt)
 
     # Genetische Funktion:
+    POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(1000, 0.05, 0.02, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), trips_cost)
+    population = genetic.main(5000, 0.25, 0.1, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
 
     best_individual = max(population, key=lambda ind: ind.score)
     print(f"Best found solution - Score: {best_individual.score}")
