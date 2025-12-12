@@ -7,6 +7,8 @@ mod genetic {
     use pyo3::prelude::*;
     use rand::Rng;
     use rand::seq::SliceRandom;
+    use indicatif::{ProgressBar, ProgressState, ProgressStyle};
+    use std::{cmp::min, fmt::Write};
 
     #[pyclass]
     #[derive(Clone)]
@@ -93,6 +95,11 @@ mod genetic {
             wallet_trips.sort_unstable_by_key(|t| t.start_time);
 
             for i in 0..wallet_trips.len() - 1{
+                //Safe handling (Wenn einem Wallet weniger als 2 Trips hinzugefügt wurden)
+                if wallet_trips.len() <= 1{
+                    penalty += 1000.0; //Meist 2+ Trips Zuhause->Arbeit->Zuhause->...
+                    break;
+                }
                 let current = wallet_trips[i];
                 let next = wallet_trips[i+1];
 
@@ -107,7 +114,7 @@ mod genetic {
             }
         }
 
-        let bad = (total_error as f64) + penalty;
+        let bad = ((total_error as f64) + penalty) * 0.001; //*0.001, da Zahlen sonst zu klein sind
         //let good = bonus;
         //let score = (1.0 + good) / (1.0 + bad);
         let score = 1.0 / (1.0 + bad);
@@ -270,6 +277,15 @@ mod genetic {
         let mut mutation_rate = 1.0;
         let mut previous_score = population[0].score;
         let mut no_improvement_generations = 0;
+        let mut best_score = 0.0;
+        //Create a new progress bar: https://github.com/console-rs/indicatif/blob/HEAD/examples/download.rs
+        let pb = ProgressBar::new(generations as u64);
+
+        //Style of progress bar
+        pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {current}/{total} ({eta}) {msg}")
+            .unwrap()
+            .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+            .progress_chars("#>-"));
 
         //Main Loop
         for i in 0..generations{
@@ -283,7 +299,7 @@ mod genetic {
                 }
                 population_sum += population[j].score;
             }
-            let best_score = best_individual.score;
+            best_score = best_individual.score;
             if best_score <= previous_score{
                 no_improvement_generations += 1;
             }
@@ -291,8 +307,8 @@ mod genetic {
                 no_improvement_generations = 0;
             }
             let avg_score = population_sum / (population.len() as f64);
-            println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
-            
+            //println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
+            pb.set_message(format!("Gen: {} | Best: {:.6} | Avg: {:.4}", i, best_score, avg_score));
 
             let elite_count = (population.len() as f64 * 0.02) as usize;
             let parents = selection(&population, population_size as usize, 7);
@@ -337,7 +353,10 @@ mod genetic {
 
             population = next_generation;
             previous_score = best_score;
+            // Update the progress bar
+            pb.inc(1);
         }
+        pb.finish_with_message(format!("Finished! Best Score: {}", best_score.to_string()));
         population
     }
 

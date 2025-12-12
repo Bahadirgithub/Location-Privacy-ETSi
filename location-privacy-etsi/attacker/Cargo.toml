@@ -9,5 +9,7 @@ name = "genetic"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = "0.27.0" #Python Konnektor
-rand = "0.8" #Random Bibliothek
+#* = neuste version
+pyo3 = "*" #Python Konnektor
+rand = "*" #Random Bibliothek
+indicatif = "*" #Progress Bar
