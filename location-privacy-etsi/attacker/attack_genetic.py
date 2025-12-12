@@ -416,6 +416,7 @@ def report():
         f.write('Runtime:                 ' + str(time1 - time0) + '\n\n')
         f.write('simulated annealing iterations: ' + str(annealing) +'\n')
         f.write('simulated annealing result: ' + str(annealingResult) +'\n')
+        f.write('Best Genetic result: ' + str(best_individual) + '\n')
         f.write('Attacker knowledge file is   ' + "'" + input_file_name + "'\n")
         f.write('- of file size               ' + str(os.path.getsize(input_file_name)) + ' bytes\n\n')
         f.write('Output file is   ' + "'" + 'attacks/' + output_file_name + "'\n")
@@ -429,6 +430,7 @@ def report():
 def main():
     global DG,results,usedTrans,tree_attacker_knowlege,root_attacker_knowlege
     global transactions_attacker_knowlege
+    global best_individual
       #create new networkx graph
     DG = nx.DiGraph()
 
@@ -467,16 +469,36 @@ def main():
 
     print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
 
+    all_detectors = sorted(list(DG.nodes()))
+    det_to_id = {name: i for i, name in enumerate(all_detectors)}
+    num_locations = len(all_detectors)
+
+    trans_id_to_det = {}
+    for trans in transactions_attacker_knowlege:
+        t_id = int(trans.attrib['id'])
+        t_det = trans.attrib['detector']
+        trans_id_to_det[t_id] = t_det
+
+    num_trips = len(results)
+
     # Generate Rust Trip Objects
     rust_trips = []
-    for i in range(len(results)):
+    for i in range(num_trips):
         py_trip = results[i]
+
+        start_trans_id = py_trip.used[0]
+        end_trans_id = py_trip.used[-1]
+
+        start_det_name = trans_id_to_det[start_trans_id]
+        end_det_name = trans_id_to_det[end_trans_id]
 
         rt = genetic.Trip(
             id=i,
             cost=int(py_trip.cost),
             start_time=int(py_trip.timeStart),
             end_time=int(py_trip.timeEnd),
+            start_loc_id=det_to_id.get(start_det_name, 0),
+            end_loc_id=det_to_id.get(end_det_name, 0),
         )
         rust_trips.append(rt)
 
@@ -485,7 +507,7 @@ def main():
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(5000, 0.25, 0.1, len(results), len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
+    population = genetic.main(20000, 0.08, 0.02, num_trips, len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
 
     best_individual = max(population, key=lambda ind: ind.score)
     print(f"Best found solution - Score: {best_individual.score}")

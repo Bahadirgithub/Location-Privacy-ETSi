@@ -28,20 +28,17 @@ mod genetic {
         start_time: u32,
         #[pyo3(get, set)]
         end_time: u32,
-        /*
         #[pyo3(get, set)]
         start_loc_id: usize,
         #[pyo3(get, set)]
         end_loc_id: usize,
-
-         */
     }
 
     #[pymethods]
     impl Trip {
         #[new]
-        fn new(id: usize, cost: u32, start_time: u32, end_time: u32) -> Self {
-            Trip { id, cost, start_time, end_time }
+        fn new(id: usize, cost: u32, start_time: u32, end_time: u32, start_loc_id:usize, end_loc_id:usize) -> Self {
+            Trip { id, cost, start_time, end_time, start_loc_id, end_loc_id }
         }
 
         fn __repr__(&self) -> String {
@@ -93,9 +90,6 @@ mod genetic {
 
         //check for plausibility
         for wallet_trips in wallets.iter_mut() {
-            if wallet_trips.is_empty() {
-                continue;
-            }
             wallet_trips.sort_unstable_by_key(|t| t.start_time);
 
             for i in 0..wallet_trips.len() - 1{
@@ -103,12 +97,22 @@ mod genetic {
                 let next = wallet_trips[i+1];
 
                 if current.end_time > next.start_time{
-                    penalty += 100.0; //penalty prüfen
+                    penalty += 1000.0; //penalty prüfen
+                }
+
+                //check for simmilarity in start and end location
+                if current.end_loc_id != next.start_loc_id {
+                    penalty += 100.0;
                 }
             }
         }
 
-        1.0 / (1.0 + ((total_error as f64) + penalty))
+        let bad = (total_error as f64) + penalty;
+        //let good = bonus;
+        //let score = (1.0 + good) / (1.0 + bad);
+        let score = 1.0 / (1.0 + bad);
+
+        score
    }
 
 
@@ -123,7 +127,7 @@ mod genetic {
                 &genome,
                 num_wallets,
                 &trips_costs,
-                &sorted_wallets
+                &sorted_wallets,
             );
 
             population.push(Individual { genome, score });
@@ -134,14 +138,12 @@ mod genetic {
 
 
     //Tournament Selection
-    fn selection(population: Vec<Individual>, tournament_num:usize, tournament_size:usize, selection_size: usize) -> Vec<Individual>{
+    fn selection(population: &Vec<Individual>, tournament_num:usize, tournament_size:usize) -> Vec<Individual>{
         //https://www.baeldung.com/cs/ga-tournament-selection
         //https://cratecode.com/info/genetic-algorithms-selection-techniques
         let mut result = Vec::new();
 
-        result = apply_elitism(population.clone(), selection_size); // Keep the best individuals from last generation
-
-        for _ in selection_size..tournament_num {
+        for _ in 0..tournament_num {
             //Select a random subset from population
             let tournament:Vec<Individual> = population.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
 
@@ -232,7 +234,7 @@ mod genetic {
     }
 
     //Elitism
-    fn apply_elitism(mut population: Vec<Individual>, selection_size: usize) -> Vec<Individual>{
+    fn select_elitism(population: &mut Vec<Individual>, selection_size: usize) -> Vec<Individual>{
         //https://www.woodruff.dev/day-12-genetic-algorithms-elitism-for-evolution-survival-of-the-fittest/
         let mut result = Vec::new();
 
@@ -245,14 +247,29 @@ mod genetic {
 
         result
     }
+    fn apply_elitism(population: &mut Vec<Individual>, elites: Vec<Individual>) -> Vec<Individual>{
+        let selection_size = elites.len();
+
+        population.sort_by(|a, b| a.score.partial_cmp(&b.score).unwrap()); // sort ascending based on score
+        //Schlechteste Ergebisse mit entfernen & eliten aus der letzen Generation hinzufügen
+        for i in 0..selection_size {
+            population.remove(i);
+            population.push(elites[i].clone());
+        }
+
+        population.to_vec()
+    }
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize,p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips: Vec<Trip>) -> Vec<Individual>{
+    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips: Vec<Trip>) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Init
         let mut population = initial_population(population_size, num_trips,num_wallets, &trips, &sorted_wallets);
+        let mut mutation_rate = 1.0;
+        let mut previous_score = population[0].score;
+        let mut no_improvement_generations = 0;
 
         //Main Loop
         for i in 0..generations{
@@ -267,14 +284,27 @@ mod genetic {
                 population_sum += population[j].score;
             }
             let best_score = best_individual.score;
+            if best_score <= previous_score{
+                no_improvement_generations += 1;
+            }
+            else{
+                no_improvement_generations = 0;
+            }
             let avg_score = population_sum / (population.len() as f64);
             println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
+            
 
-            if best_score == 1.0{
-                return population;  // If best score (1.0) is reached exit the main loop
+            let elite_count = (population.len() as f64 * 0.02) as usize;
+            let parents = selection(&population, population_size as usize, 7);
+
+            //Select the best individuals
+            let elites = select_elitism(&mut population, elite_count);
+
+            //https://www.woodruff.dev/day-32-when-genetic-algorithms-go-wrong-debugging-poor-performance-and-premature-convergence/
+            //Mutation Rate
+            if no_improvement_generations == 50{
+                mutation_rate *= 1.2;
             }
-
-            let parents = selection(population, population_size as usize, 7, 4);
 
             let mut next_generation: Vec<Individual> = Vec::new();
             for j in (0..parents.len()).step_by(2){
@@ -284,25 +314,29 @@ mod genetic {
                 let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips, &sorted_wallets);
 
                 // Apply small mutation (swap) with probability
-                if rand::random::<f32>() < p_mutation_small {
+                if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
                     child1 = mutation_small(child1, num_wallets, &trips, &sorted_wallets);
                 }
-                if rand::random::<f32>() < p_mutation_small {
+                if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
                     child2 = mutation_small(child2, num_wallets, &trips, &sorted_wallets);
                 }
 
                 // Apply big mutation (scramble) with probability
-                if rand::random::<f32>() < p_mutation_big {
+                if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
                     child1 = mutation_big(child1, num_wallets, &trips, &sorted_wallets);
                 }
-                if rand::random::<f32>() < p_mutation_big {
+                if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
                     child2 = mutation_big(child2, num_wallets, &trips, &sorted_wallets);
                 }
 
                 next_generation.push(child1);
                 next_generation.push(child2);
             }
+            //Overwrite the worst Indivuduals of next generation with the best indivuduals of the previous
+            next_generation = apply_elitism(&mut next_generation, elites);
+
             population = next_generation;
+            previous_score = best_score;
         }
         population
     }
