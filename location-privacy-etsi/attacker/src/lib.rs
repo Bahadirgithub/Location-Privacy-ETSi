@@ -89,17 +89,22 @@ mod genetic {
         }
 
         let mut penalty = 0.0;
+        let mut bonus = 0.0;
 
         //check for plausibility
         for wallet_trips in wallets.iter_mut() {
             wallet_trips.sort_unstable_by_key(|t| t.start_time);
 
             for i in 0..wallet_trips.len() - 1{
+                if i>0 && (wallet_trips[i].start_loc_id == wallet_trips[0].start_loc_id || wallet_trips[i].end_loc_id == wallet_trips[0].start_loc_id){
+                    bonus += 1.0;
+                }
                 //Safe handling (Wenn einem Wallet weniger als 2 Trips hinzugefügt wurden)
                 if wallet_trips.len() <= 1{
                     penalty += 1000.0; //Meist 2+ Trips Zuhause->Arbeit->Zuhause->...
                     break;
                 }
+
                 let current = wallet_trips[i];
                 let next = wallet_trips[i+1];
 
@@ -114,10 +119,10 @@ mod genetic {
             }
         }
 
-        let bad = ((total_error as f64) + penalty) * 0.001; //*0.001, da Zahlen sonst zu klein sind
+        let bad = (total_error as f64) + penalty;
         //let good = bonus;
         //let score = (1.0 + good) / (1.0 + bad);
-        let score = 1.0 / (1.0 + bad);
+        let score = (1.0 + bonus) / (1.0 + bad);
 
         score
    }
