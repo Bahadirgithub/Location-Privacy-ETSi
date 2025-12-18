@@ -5,11 +5,11 @@ import sys
 import time
 import networkx as nx
 import xml.etree.ElementTree as ET
-import numpy as np
 import random
 from copy import copy
 from tqdm import tqdm
 from datetime import datetime
+import genetic
 
 #possible trip that was found with all the information
 class Trip:
@@ -45,10 +45,38 @@ def generateGraph():
         DG.add_edge(fromDetector, toDetector, avg=avg, min=minTime, max=maxTime)
 
 
+def precompute_lookahead_cache():
+    """
+    Erstellt einen Cache für den schnellen Lookahead.
+    Optimiert: Keine unnötigen Graph-Abfragen mehr.
+    """
+    # 1. Letzte Transaktionszeit pro Detektor ermitteln
+    max_times = {}
+    for det, trans_list in transaction_lookup.items():
+        if trans_list:
+            max_times[det] = trans_list[-1][0]
+
+    lookahead_cache = {}
+
+    # 2. Cache bauen
+    # Wir iterieren über alle Knoten im Graphen. Da 'node' aus DG.nodes() kommt,
+    # müssen wir NICHT prüfen, ob er existiert.
+    for node in DG.nodes():
+        max_future_time = 0
+
+        # out_edges liefert direkt alle Nachbarn
+        for _, neighbor, _ in DG.out_edges(node, data=True):
+            # Nutze .get() für ultraschnellen Zugriff ohne Absturzrisiko
+            t = max_times.get(neighbor, 0)
+            if t > max_future_time:
+                max_future_time = t
+
+        lookahead_cache[node] = max_future_time
+
+    return lookahead_cache
 
 
 #find the trips with the best deviation from the avg. times
-
 def findTrips():
 
     lastDetector = ""
@@ -57,36 +85,42 @@ def findTrips():
 
     x=0 #used for the agend names
 
+    sorted_indices = sorted(
+        range(len(transactions_attacker_knowlege)),
+        key=lambda k: int(transactions_attacker_knowlege[k].attrib['time'])
+    )
+
+    lookahead_cache = precompute_lookahead_cache()
 
     #go through every transaction, and try to find a possible trip
-    for i in range(0, len(transactions_attacker_knowlege)):
+    for i in sorted_indices:
 
         #startpoint of the trip
-        transaction= transactions_attacker_knowlege[i]
-        first= True
+        transaction = transactions_attacker_knowlege[i]
+        first = True
 
         #string with all detector names, that are used in this trip
-        result = ""        
-       
+        result = ""
+
         #id of the transaction
-        id =  int(transaction.attrib['id'])
+        id = int(transaction.attrib['id'])
 
         #used to start the inner for loop at the right transaction
         inner_start=i
 
-        #only search for a trip if the start transaction was't used before   
+        #only search for a trip if the start transaction was't used before
         if not id in usedTrans:
 
             #get the informations from this startpoint
-            lastDetector = transaction.attrib['detector']      
-            detector = transaction.attrib['detector']   
+            lastDetector = transaction.attrib['detector']
+            detector = transaction.attrib['detector']
             timeTrans = int(transaction.attrib['time'])
             cost = int(transaction.attrib['cost'])
 
             # remember start time
-            timeStart = timeTrans            
+            timeStart = timeTrans
 
-            #was at least one plausible trip edge found  
+            #was at least one plausible trip edge found
             found = False
 
             #local used transaction ids
@@ -100,7 +134,7 @@ def findTrips():
 
             # array with the best deviations
             bestDeltas = []
-           
+
 
             while(True):
 
@@ -114,8 +148,8 @@ def findTrips():
 
                     #calculate time slot we are searching
                     avg = data.get('avg')
-                    min_travel = data.get('min') * 0.8
-                    max_travel = min(data.get('max') * 1.2, 4 * avg)
+                    min_travel = data.get('min') * 0.5
+                    max_travel = min(data.get('max') * 3.0, 300)
 
                     min_time = timeTrans + min_travel
                     max_time = timeTrans + max_travel
@@ -138,6 +172,18 @@ def findTrips():
                             travel_time = timeTrans_inner - timeTrans
                             deltaTemp = abs(avg - travel_time)
 
+                            # Check if the next detector is a dead end.
+                            # If so, deltaTemp will be massively penalized (+1000s) so that we only dial it in an emergency.
+                            next_det = transaction_inner.attrib['detector']
+
+                            last_possible = lookahead_cache.get(next_det, 0)
+
+                            has_continuation = last_possible > timeTrans_inner
+
+                            # Apply punishment unless it's very late in the day (> 80,000s) where trips end naturally
+                            if not has_continuation and timeTrans_inner < 80000:
+                                deltaTemp += 1000
+
                             #save the best deltas
                             if (not found or deltaTemp < bestDeltas[-1][2]):
                                 found = True
@@ -147,32 +193,38 @@ def findTrips():
                                 bestDeltas.sort(key=lambda c: c[2])
 
                                 # cut the array. only the n best trips will be saved
-                                bestDeltas = bestDeltas[0:2]
-                
-                #get out the while loop if no trip was found             
+                                bestDeltas = bestDeltas[0:3]
+
+                #get out the while loop if no trip was found
                 if not found:
                     break
                 else:
-                
+
                     #add the values for the first trip node.
                     if first:
                         result = detector[6:-2] #only saves the edge name
                         first = False
                         locUsed.append(id)
                         usedTrans.add(id)
-                    
-                    #get one random entry from the array with the best values    
-                    outcome = random.randint(0,len(bestDeltas)-1)
-                     
-                    delta = bestDeltas[outcome][2] 
-                    transTemp = bestDeltas[outcome][1]  
+
+                    #Weighted Randomness
+                    #Calculation: Weight = 1 / (delta + 1)^2 | The +1 prevents division by 0
+                    weights = [1 / ((x[2] + 1.0) ** 2) for x in bestDeltas]
+
+                    choice_data = random.choices(bestDeltas, weights=weights, k=1)[0]
+
+                    #get one random entry from the array with the best values
+                    outcome = bestDeltas.index(choice_data)
+
+                    delta = bestDeltas[outcome][2]
+                    transTemp = bestDeltas[outcome][1]
                     inner_start = bestDeltas[outcome][3]
 
-                    #update last the detector                      
-                    lastDetector= transTemp.attrib['detector']  
+                    #update last the detector
+                    lastDetector= transTemp.attrib['detector']
                     t=int(transTemp.attrib['time'])
                     cost2 = int(transTemp.attrib['cost'])
-                    
+
                     #remeber used id
                     k=int(bestDeltas[outcome][0])
                     locUsed.append(k)
@@ -181,32 +233,30 @@ def findTrips():
                     #calculate delta avg.
                     deltaSumArr =  deltaSumArr + [delta]
                     deltaSumAvg=sum(deltaSumArr)/len(deltaSumArr)
-                    
+
                     # remove the lane and e1det
                     result = result + " " + lastDetector[6:-2]
 
                     #update costs
                     cost = cost + cost2
-                    
+
                     #update timestamp from the new detector
                     timeTrans = t
 
                     #reset
-                    delta = -1 
+                    delta = -1
                     found = False
                     bestDeltas = []
-          
-              
 
-            #save trip when no new plausible transaction were found     
-            if result != "":            
+            #save trip when no new plausible transaction were found
+            if result != "":
                 results.append(Trip("agent"+str(x),timeStart,t, t-timeStart, cost, set(result.split()), locUsed,deltaSumAvg))
                 #update agend number
-                x += 1 
+                x += 1
 
         
     # find the not used transactions and give them a high weight (100 here) -> a high priority to reduce them
-    for l in range(0, len(transactions_attacker_knowlege)):
+    for l in sorted_indices:
        
         transac= transactions_attacker_knowlege[l]    
         id = int(transac.attrib['id'])
@@ -218,214 +268,6 @@ def findTrips():
             x += 1
     #sort results. worst deltaSum first     
     results.sort(key = lambda c: c.deltaSum, reverse=True)
-    
-# Genetische Funktion:
-
-#Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
-# -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-
-#Erste Test Parameter
-POPULATION_SIZE = 1000 #Für Testzwecke sonst eher 100+
-GENOME_LENGHT = 20 #Anzahl der sets
-MUTATION_RATE = 0.01
-CROSSOVER_RATE = 0.01
-
-def create_individual(num_trips, num_wallets): #Eine Lösungsmenge= Individum / Genom
-    genome = []
-    for _ in range(num_trips):
-        #Zufällige Zuordnung
-        wallet_id = random.randint(0, num_wallets - 1)
-        genome.append(wallet_id)
-    return genome
-
-def initial_population(num_trips, num_wallets):
-    population = []
-
-    #Erzeuge erste Generation
-    for _ in range(POPULATION_SIZE):
-        individual = create_individual(num_trips, num_wallets)
-        population.append(individual)
-
-    return population
-
-#TO DO: Fitnessfunktion muss implementiert werden!!!
-
-#Herausforderung: Fitnessfunktion muss einer gesamten Zuweisung eine Zahl (Score) geben
-def fitness(individum, trips, wallets):
-    # 1. Kriterium: Übereinstimmung der Kosten
-    # 2. Kriterium: Trips innerhalb der Wallets sollen sich ähneln (Jaccard)
-
-    N_WALLETS = len(wallets)
-
-    calculated_sums = [0] * N_WALLETS
-
-    for trip_index, wallet_id in enumerate(individum):
-        #Kosten des Trips
-        trip_cost = trips[trip_index].cost
-
-        #Addiere Kosten
-        calculated_sums[wallet_id] += trip_cost
-
-    #Listen sortieren
-    sorted_targets = sorted(wallets)
-    sorted_calculated = sorted(calculated_sums)
-
-    #Berechne die Fehler
-    error = 0
-
-    for i in range(N_WALLETS):
-        error += abs(sorted_targets[i] - sorted_calculated[i])
-
-    score = 1.0 / (1.0 + error) #+1 damit nicht durch 0 geteilt wird
-    return score
-
-
-
-#compares trips and combines them if they are mostly equal. sum < min (wallet costs). if a trip has the sum of the min sum try to fill the next
-def compareTripsMin():
-    #first limit, percentage should be higher as minlim to combine them in the first iteration
-    minlim=40 
-    #how often we iterated with minlim 0    
-    zero = 0
-    #tqdm manual    
-    pbar = tqdm(total=len(results), desc="Generate Wallets")
-    #sort wallets
-    walletCosts.sort()
-    #index
-    pos = 0
-     
-    while(len(results) != len(walletCosts)):
-        
-        results.sort(key = lambda c: c.cost)
-        tripA = ""
-        tripB = ""
-        #find for each trip the best trip with the best similarity
-        for i, trip in enumerate(results):
-            
-            listA = trip.trip
-            x=0
-            v = 0
-            for j  in range(v,len(results)):
-                trip2=results[j]
-                v = j
-                if i != j:    
-                    #split the trip string into a set
-                    listB = trip2.trip
-                    #create a list backwards
-                    backwardsListB = backwards(listB)
-                    #caluclate the similarity between the 2 trips, with Jaccard index
-                    k = len(listA & listB) / float(len(listA|listB)) * 100
-                    kBack = len(listA &  backwardsListB) / float(len(listA | backwardsListB)) * 100
-                    #remeber the better trip
-                    if (x < k or x < kBack) and (trip.cost+trip2.cost <= walletCosts[pos] or (zero > 0 and trip == results[0])):
-                        tripA = trip
-                        tripB = trip2
-                        x = max(k,kBack)
-            #only copy the best trip         
-            if x > minlim:
-
-                if len(results) == len(walletCosts):
-                    break
-
-                if tripA.cost+tripB.cost == walletCosts[pos]:
-                        pos = pos+1
-                
-                copyTrip(tripA,tripB) 
-
-            pbar.update(1)
-
-        if len(results) == len(walletCosts):
-                    break  
-        #reduce the limit 
-        minlim = max(minlim-20,0)
-        
-        if minlim == 0:
-            zero += 1
-            if zero > 3:
-                
-                break   
-    zero = 0        
-    pbar.close()
-
-
-#compares trips and combines them if they are mostly equal. sum < max(wallet costs)
-def compareTripsMax():
-    #first limit, percentage should be higher as minlim to combine them in the first iteration
-    minlim=60
-    #how often we iterated with minlim 0    
-    zero = 0    
-    pbar = tqdm(total=len(results))
-    while(len(results) != len(walletCosts)):
-        x = 0
-        results.sort(key = lambda c: c.cost)
-        tripA = ""
-        tripB = ""
-
-        for trip in results:
-           
-            listA = trip.trip
-            x=0
-            for trip2 in results:
-                
-                if trip != trip2:    
-                    
-                    listB = trip2.trip
-                    backwardsListB = backwards(listB)
-                    k = len(listA & listB) / float(len(listA|listB)) * 100
-                    kBack = len(listA &  backwardsListB) / float(len(listA | backwardsListB)) * 100
-                    if (x < k or x < kBack) and (trip.cost+trip2.cost <= max(walletCosts) or (zero > 0 and trip == results[0])):
-                        tripA = trip
-                        tripB = trip2
-                        x = max(k,kBack)
-                        
-            if x > minlim:
-                if len(results) == len(walletCosts):
-                    break
-                copyTrip(tripA,tripB) 
-            pbar.update(1)
-
-        minlim = max(minlim-20,0)
-        if len(results) == len(walletCosts):
-                    break  
-        if minlim == 0:
-            zero += 1
-            if zero > 3:
-                
-                break   
-    zero = 0        
-    pbar.close()
-
-
-#compares the trips and tries to add them up to reach the wallet sums
-def compareTripsSum():
-    
-    #tqdm manual    
-    pbar = tqdm(total=len(results))
-    #sort wallets, try to fill the wallets with the lowest cost first
-    walletCosts.sort()
-      
-        
-    for k, wallet in enumerate(walletCosts):
-
-        results.sort(key = lambda c: c.cost,reverse=True)        
-        
-        trip = results[k]
-
-        x = k+1
-        #combine them
-        while trip.cost != wallet and  x < len(results)-1 and len(results) > len(walletCosts):
-             
-            for j in range(k+1,len(results)):
-                trip2 = results[j]
-                x=j
-                if trip != trip2:    
-                    
-                    #save the better trip
-                    if trip.cost+trip2.cost <= wallet :
-                        copyTrip(trip,trip2)
-                        break
-            pbar.update(1)
-    pbar.close()
 
 #returns an array backwards
 def backwards(array):
@@ -470,10 +312,7 @@ def randomTrip():
     results = []
     usedTrans = set([])  
     findTrips() 
-    
-    
-    
-    
+
 #uses the best results with the lowest difference and tries to optimise the routes with simulated annealing
 def simAn():
     global results,usedTrans,annealingResult
@@ -519,8 +358,6 @@ def simAn():
                 d=randomD
     annealingResult = d
 
-
-            
 
 #creates a list with all wallet costs and a list with all result costs
 def create_list():
@@ -579,6 +416,7 @@ def report():
         f.write('Runtime:                 ' + str(time1 - time0) + '\n\n')
         f.write('simulated annealing iterations: ' + str(annealing) +'\n')
         f.write('simulated annealing result: ' + str(annealingResult) +'\n')
+        f.write('Best Genetic result: ' + str(best_individual) + '\n')
         f.write('Attacker knowledge file is   ' + "'" + input_file_name + "'\n")
         f.write('- of file size               ' + str(os.path.getsize(input_file_name)) + ' bytes\n\n')
         f.write('Output file is   ' + "'" + 'attacks/' + output_file_name + "'\n")
@@ -589,10 +427,10 @@ def report():
     print('Report written to ' + "'" + 'reports/' + rep_name + "'")
 
 
-
 def main():
     global DG,results,usedTrans,tree_attacker_knowlege,root_attacker_knowlege
     global transactions_attacker_knowlege
+    global best_individual
       #create new networkx graph
     DG = nx.DiGraph()
 
@@ -629,33 +467,73 @@ def main():
 
     create_list()
 
-    #Das muss durch genetischen Algorithmus ersetzt werden!
-    #compareTripsMin()
-    #compareTripsSum()
-    #compareTripsMax()
-    print("Numer of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
-    pop = initial_population(len(results), len(walletCosts)) #<- Hier Breakpoint setzen dann kann man die Population sehen
+    print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
 
-    scores_test = []
+    all_detectors = sorted(list(DG.nodes()))
+    det_to_id = {name: i for i, name in enumerate(all_detectors)}
+    num_locations = len(all_detectors)
 
-    for i in range(POPULATION_SIZE):
-        scores_test.append(fitness(pop[i], results, walletCosts))
-    print("Bestes Ergebniss: " + str(max(scores_test)))
+    trans_id_to_det = {}
+    for trans in transactions_attacker_knowlege:
+        t_id = int(trans.attrib['id'])
+        t_det = trans.attrib['detector']
+        trans_id_to_det[t_id] = t_det
+
+    num_trips = len(results)
+
+    # Generate Rust Trip Objects
+    rust_trips = []
+    for i in range(num_trips):
+        py_trip = results[i]
+
+        start_trans_id = py_trip.used[0]
+        end_trans_id = py_trip.used[-1]
+
+        start_det_name = trans_id_to_det[start_trans_id]
+        end_det_name = trans_id_to_det[end_trans_id]
+
+        rt = genetic.Trip(
+            id=i,
+            cost=int(py_trip.cost),
+            start_time=int(py_trip.timeStart),
+            end_time=int(py_trip.timeEnd),
+            start_loc_id=det_to_id.get(start_det_name, 0),
+            end_loc_id=det_to_id.get(end_det_name, 0),
+        )
+        rust_trips.append(rt)
+
+    # Genetische Funktion:
+    POPULATION_SIZE = 500
+
+    # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
+    # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
+    population = genetic.main(30000, 0.1, 0.05, num_trips, len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
+
+    best_individual = max(population, key=lambda ind: ind.score)
+
+    wallet_assignments = {i: [] for i in range(len(walletCosts))}
+
+    for trip_index, wallet_id in enumerate(best_individual.genome):
+        if wallet_id < len(walletCosts):
+            original_trip = results[trip_index]
+            wallet_assignments[wallet_id].append(original_trip)
+
 
     #write wallet results
-    wallets =  ET.SubElement(output_root, "wallets")
-    for wallet in results:
-        strList = list(map(str, wallet.used))
-        ET.SubElement(wallets, "wallet",  ids = " ".join(strList) )
+    wallets_xml =  ET.SubElement(output_root, "wallets")
+    for wallet_id in range(len(walletCosts)):
+        assigned_trips = wallet_assignments[wallet_id]
+
+        all_transaction_ids = []
+        for trip in assigned_trips:
+            all_transaction_ids.extend(trip.used)
+
+        strList = list(map(str, all_transaction_ids))
+        ET.SubElement(wallets_xml, "wallet", ids=" ".join(strList))
     tree = ET.ElementTree(output_root)
     tree.write('attacks/' + output_file_name)
-    
-
-    
    
     print('Finished')
-
-
 
 
 
