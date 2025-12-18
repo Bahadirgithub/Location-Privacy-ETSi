@@ -14,9 +14,39 @@ mod genetic {
     #[derive(Clone)]
     struct Individual {
         #[pyo3(get, set)]
-        genome: Vec<u32>,
+        genome_trip: Vec<u32>,
+        #[pyo3(get, set)]
+        genome_wallet: Vec<u32>,
         #[pyo3(get, set)]
         score: f64
+    }
+
+    #[pyclass]
+    #[derive(Clone)]
+    struct Transaction {
+        #[pyo3(get, set)]
+        id: u32,
+        #[pyo3(get, set)]
+        detector: u32,
+        #[pyo3(get, set)]
+        time: f32,
+        #[pyo3(get, set)]
+        cost: f32,
+    }
+
+    #[pyclass]
+    #[derive(Clone)]
+    struct Simulated_Times {
+        #[pyo3(get, set)]
+        from_detector: u32,
+        #[pyo3(get, set)]
+        to_detector: u32,
+        #[pyo3(get, set)]
+        avg: f32,
+        #[pyo3(get, set)]
+        min: f32,
+        #[pyo3(get, set)]
+        max: f32,
     }
 
     #[pyclass]
@@ -51,12 +81,12 @@ mod genetic {
     #[pymethods]
     impl Individual {
         #[new]
-        fn new(genome: Vec<u32>, score: f64) -> Self {
-            Individual { genome, score }
+        fn new(genome_trip: Vec<u32>, genome_wallet: Vec<u32>, score: f64) -> Self {
+            Individual { genome_trip, genome_wallet, score }
         }
 
         fn __repr__(&self) -> String {
-            format!("Individual(score={:.6}, genome={:?})", self.score, self.genome)
+            format!("Individual(score={:.6}, gemome_trip={:?}, genome_wallet={:?})", self.score, self.genome_trip, self.genome_wallet)
         }
     }
 
@@ -132,17 +162,17 @@ mod genetic {
         let mut population = Vec::new();
 
         for _ in 0..population_size {
-            let genome = create_individual(num_trips, num_wallets);
+            let genome_wallet = create_individual(num_trips, num_wallets);
 
             // Keine clones mehr!
             let score = fitness(
-                &genome,
+                &genome_wallet,
                 num_wallets,
                 &trips_costs,
                 &sorted_wallets,
             );
 
-            population.push(Individual { genome, score });
+            population.push(Individual { genome_wallet, score });
         }
 
         population
@@ -174,32 +204,32 @@ mod genetic {
     //Two-Point Crossover
     fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> (Individual, Individual){
         //https://www.geeksforgeeks.org/machine-learning/crossover-in-genetic-algorithm/
-        let genome_size = parent_1.genome.len();
+        let genome_wallet_size = parent_1.genome_wallet.len();
 
-        let mut child_1 = Individual { genome: vec![0; genome_size], score: 0.0};
-        let mut child_2 = Individual { genome: vec![0; genome_size], score: 0.0};
+        let mut child_1 = Individual { genome_wallet: vec![0; genome_wallet_size], score: 0.0};
+        let mut child_2 = Individual { genome_wallet: vec![0; genome_wallet_size], score: 0.0};
 
-        let swap_1 = rand::thread_rng().gen_range(0..genome_size/2);
-        let swap_2 = rand::thread_rng().gen_range(genome_size/2..genome_size);
+        let swap_1 = rand::thread_rng().gen_range(0..genome_wallet_size/2);
+        let swap_2 = rand::thread_rng().gen_range(genome_wallet_size/2..genome_wallet_size);
 
-        //parent_1 & parent_2 should have the same genome size!
-        for i in 0..genome_size{
+        //parent_1 & parent_2 should have the same genome_wallet size!
+        for i in 0..genome_wallet_size{
             if i < swap_1{
-                child_1.genome[i] = parent_1.genome[i];
-                child_2.genome[i] = parent_2.genome[i];
+                child_1.genome_wallet[i] = parent_1.genome_wallet[i];
+                child_2.genome_wallet[i] = parent_2.genome_wallet[i];
             }
             else if (i >= swap_1) && (i < swap_2){
-                child_1.genome[i] = parent_2.genome[i];
-                child_2.genome[i] = parent_1.genome[i];
+                child_1.genome_wallet[i] = parent_2.genome_wallet[i];
+                child_2.genome_wallet[i] = parent_1.genome_wallet[i];
             }
             else{
-                child_1.genome[i] = parent_1.genome[i];
-                child_2.genome[i] = parent_2.genome[i];
+                child_1.genome_wallet[i] = parent_1.genome_wallet[i];
+                child_2.genome_wallet[i] = parent_2.genome_wallet[i];
             }
         }
 
-        child_1.score = fitness(&child_1.genome, num_wallets, &trip_cost, &sorted_wallets);
-        child_2.score = fitness(&child_2.genome, num_wallets, &trip_cost, &sorted_wallets);
+        child_1.score = fitness(&child_1.genome_wallet, num_wallets, &trip_cost, &sorted_wallets);
+        child_2.score = fitness(&child_2.genome_wallet, num_wallets, &trip_cost, &sorted_wallets);
 
         (child_1, child_2)
     }
@@ -207,22 +237,22 @@ mod genetic {
     //Swap Mutation
     fn mutation_small(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
-        let genome_size = mutant.genome.len();
+        let genome_wallet_size = mutant.genome_wallet.len();
 
-        let rand_1 = rand::thread_rng().gen_range(0..genome_size);
-        let mut rand_2 = rand::thread_rng().gen_range(0..genome_size);
+        let rand_1 = rand::thread_rng().gen_range(0..genome_wallet_size);
+        let mut rand_2 = rand::thread_rng().gen_range(0..genome_wallet_size);
         //rand1 cannot be the same number as rand2
         while rand_1 == rand_2 {
-            rand_2 = rand::thread_rng().gen_range(0..genome_size);
+            rand_2 = rand::thread_rng().gen_range(0..genome_wallet_size);
         }
 
         //Swap
-        let temp = mutant.genome[rand_1];
-        mutant.genome[rand_1] = mutant.genome[rand_2];
-        mutant.genome[rand_2] = temp;
+        let temp = mutant.genome_wallet[rand_1];
+        mutant.genome_wallet[rand_1] = mutant.genome_wallet[rand_2];
+        mutant.genome_wallet[rand_2] = temp;
 
         //Calculate fitness
-        mutant.score = fitness(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+        mutant.score = fitness(&mutant.genome_wallet, num_wallets, &trip_cost, &sorted_wallets);
 
         mutant
     }
@@ -230,17 +260,17 @@ mod genetic {
     //Scramble Mutation
     fn mutation_big(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
-        let genome_size = mutant.genome.len();
+        let genome_wallet_size = mutant.genome_wallet.len();
 
-        let slice_len = rand::thread_rng().gen_range(1..genome_size);
-        let rand_1 = rand::thread_rng().gen_range(0..genome_size - slice_len + 1);
+        let slice_len = rand::thread_rng().gen_range(1..genome_wallet_size);
+        let rand_1 = rand::thread_rng().gen_range(0..genome_wallet_size - slice_len + 1);
         let rand_2 = rand_1 + slice_len;
 
-        let slice = &mut mutant.genome[rand_1..rand_2];
+        let slice = &mut mutant.genome_wallet[rand_1..rand_2];
         slice.shuffle(&mut rand::thread_rng());
 
         //Calculate fitness
-        mutant.score = fitness(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+        mutant.score = fitness(&mutant.genome_wallet, num_wallets, &trip_cost, &sorted_wallets);
 
         mutant
     }
@@ -274,10 +304,11 @@ mod genetic {
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, num_wallets: usize, population_size: u32, sorted_wallets: Vec<u32>, trips: Vec<Trip>) -> Vec<Individual>{
+    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, num_trips: usize, population_size: u32, sorted_wallets: Vec<u32>, ) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Init
+        let num_wallets = sorted_wallets.len();
         let mut population = initial_population(population_size, num_trips,num_wallets, &trips, &sorted_wallets);
         let mut mutation_rate = 1.0;
         let mut previous_score = population[0].score;
