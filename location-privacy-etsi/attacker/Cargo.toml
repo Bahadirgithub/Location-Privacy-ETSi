@@ -11,5 +11,5 @@ crate-type = ["cdylib"]
 [dependencies]
 #* = neuste version
 pyo3 = "*" #Python Konnektor
-rand = "*" #Random Bibliothek
+rand = "0.8" #Random Bibliothek
 indicatif = "*" #Progress Bar
