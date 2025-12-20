@@ -5,8 +5,7 @@ use pyo3::prelude::*;
 #[pymodule]
 mod genetic {
     use pyo3::prelude::*;
-    use rand::Rng;
-    use rand::seq::SliceRandom;
+    use rand::{Error, Rng, seq::SliceRandom};
     use indicatif::{ProgressBar, ProgressState, ProgressStyle};
     use std::{cmp::min, fmt::Write};
 
@@ -34,7 +33,7 @@ mod genetic {
 
     #[pyclass]
     #[derive(Clone)]
-    struct SimulatedTimes {
+    struct SimulatedTime {
         #[pyo3(get, set)]
         from_detector: u32,
         #[pyo3(get, set)]
@@ -98,20 +97,41 @@ mod genetic {
         result
     }
 
-    fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTimes]) -> f64{
+    fn search_time(from_id: u32, to_id: u32, simulated_times: &[SimulatedTime]) -> SimulatedTime {
+        for i in 0..simulated_times.len() {
+            if ((simulated_times[i].from_detector == from_id) && (simulated_times[i].to_detector == to_id)){
+                return simulated_times[i].clone();
+            }
+        }
+        panic!("No Transaction in Simulated Times found! from_detector: {}, to_detector: {}", from_id, to_id); //Bricht die Berechnung ab (später besser behandeln!!!)
+    }
+
+    fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
         let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new()]; //Leere Trip Liste erstellen
+        let mut time_dif: f64 = 0.0;
 
         for (trans_id, trip_id) in individual.iter().enumerate() {
             trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
         }
 
+        let num_trips: usize = trips.len();
 
-        for trip in trips.iter_mut(){
+        for trip in trips{
             
+            for i in 0..num_trips - 1 {
+                let current = trip[i];
+                let next = trip[i+1];
+
+                //Zeitabweichung berechnen
+                let trans_dif: f32 = next.time - current.time;
+                let simulated_time = search_time(current.detector, next.detector, simulated_times);
+                time_dif += f64::powf((trans_dif - simulated_time.avg) as f64, 2.0); //x² funktion
+
+            }
         }
 
 
-        1.0
+        1.0 / (time_dif + 1.0)
     }
 
     fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> f64 {
