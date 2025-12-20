@@ -64,6 +64,30 @@ mod genetic {
     }
 
     #[pymethods]
+    impl SimulatedTime {
+        #[new]
+        fn new(from_detector: u32, to_detector: u32, avg: f32, min: f32, max: f32) -> Self {
+            SimulatedTime { from_detector, to_detector, avg, min, max }
+        }
+
+        fn __repr__(&self) -> String {
+            format!("Simulated Time(from_detector={}, to_detector={}, avg = {}, min = {}, max = {})", self.from_detector, self.to_detector, self.avg, self.min, self.max)
+        }
+    }
+
+    #[pymethods]
+    impl Transaction {
+        #[new]
+        fn new(id: u32, detector: u32, time: f32, cost: f32) -> Self {
+            Transaction { id, detector, time, cost }
+        }
+
+        fn __repr__(&self) -> String {
+            format!("Transaction(id={}, detector={}, time = {}, cost = {})", self.id, self.detector, self.time, self.cost)
+        }
+    }
+
+    #[pymethods]
     impl Trip {
         #[new]
         fn new(id: usize, cost: u32, start_time: u32, end_time: u32, start_loc_id:usize, end_loc_id:usize) -> Self {
@@ -107,7 +131,9 @@ mod genetic {
     }
 
     fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
-        let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new()]; //Leere Trip Liste erstellen
+        let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
+        println!("max trip id: {}", max_trip_id);
+        let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
         let mut time_dif: f64 = 0.0;
 
         for (trans_id, trip_id) in individual.iter().enumerate() {
@@ -117,19 +143,16 @@ mod genetic {
         let num_trips: usize = trips.len();
 
         for trip in trips{
-            
-            for i in 0..num_trips - 1 {
-                let current = trip[i];
-                let next = trip[i+1];
+            for window in trip.windows(2) {
+                let current = window[0];
+                let next = window[1];
 
                 //Zeitabweichung berechnen
-                let trans_dif: f32 = next.time - current.time;
+                let trans_dif: f32 = next.time as f32 - current.time as f32;
                 let simulated_time = search_time(current.detector, next.detector, simulated_times);
                 time_dif += f64::powf((trans_dif - simulated_time.avg) as f64, 2.0); //x² funktion
-
             }
         }
-
 
         1.0 / (time_dif + 1.0)
     }
@@ -338,13 +361,15 @@ mod genetic {
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulatedtimes: Vec<SimulatedTimes>) -> Vec<Individual>{
+    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Main Loop Trips
         //Init
-        let mut num_trips: usize;
-        let mut trips: Vec<Trip> = vec![Trip; num_trips];
+        let mut num_trips: usize = 1;
+        let mut trips: Vec<Trip> = vec![Trip { id: 0, cost: 0, start_time: 0, end_time: 0, start_loc_id: 0, end_loc_id: 0 }; num_trips];
+
+        println!("Initial fitness score: {}", fitness_trip(&initial_population_trips, &transactions, &simulated_times));
 
         //Initialize initial populations
         for i in 0..5000{

@@ -473,42 +473,55 @@ def main():
     det_to_id = {name: i for i, name in enumerate(all_detectors)}
     num_locations = len(all_detectors)
 
-    trans_id_to_det = {}
+    # Globales Dictionary für das Mapping
+    detector_mapping = {}
+
+    def get_detector_id(detector_name):
+        if detector_name not in detector_mapping:
+            # Die neue ID ist einfach die aktuelle Länge des Dictionaries
+            detector_mapping[detector_name] = len(detector_mapping)
+        return detector_mapping[detector_name]
+
+    rust_inital_pop = [0] * len(transactions_attacker_knowlege)
+
+    for trip_id, trip in enumerate(results):
+        for trans_id in trip.used:
+            for idx, t in enumerate(transactions_attacker_knowlege):
+                if int(t.attrib['id']) == trans_id:
+                    rust_inital_pop[idx] = trip_id
+                    break
+
+    rust_transactions = []
     for trans in transactions_attacker_knowlege:
-        t_id = int(trans.attrib['id'])
-        t_det = trans.attrib['detector']
-        trans_id_to_det[t_id] = t_det
-
-    num_trips = len(results)
-
-    # Generate Rust Trip Objects
-    rust_trips = []
-    for i in range(num_trips):
-        py_trip = results[i]
-
-        start_trans_id = py_trip.used[0]
-        end_trans_id = py_trip.used[-1]
-
-        start_det_name = trans_id_to_det[start_trans_id]
-        end_det_name = trans_id_to_det[end_trans_id]
-
-        rt = genetic.Trip(
-            id=i,
-            cost=int(py_trip.cost),
-            start_time=int(py_trip.timeStart),
-            end_time=int(py_trip.timeEnd),
-            start_loc_id=det_to_id.get(start_det_name, 0),
-            end_loc_id=det_to_id.get(end_det_name, 0),
+        t_obj = genetic.Transaction(
+            id= int(trans.attrib['id']),
+            detector= get_detector_id(str([trans.attrib['detector']])),
+            time= int(trans.attrib['time']),
+            cost= int(trans.attrib['cost']),
         )
-        rust_trips.append(rt)
+        rust_transactions.append(t_obj)
+
+    rust_sim_times = []
+    tree_detectors = ET.parse(simulated_times_file)
+    root_detectors = tree_detectors.getroot()
+
+    for detector in root_detectors.iter('route'):
+        t_obj = genetic.SimulatedTime(
+            from_detector= get_detector_id(str([detector.attrib['fromDetector']])),
+            to_detector= get_detector_id(str([detector.attrib['toDetector']])),
+            avg= float(detector.attrib['avg']),
+            min= float(detector.attrib['minTime']),
+            max= float(detector.attrib['maxTime']),
+        )
+        rust_sim_times.append(t_obj)
 
     # Genetische Funktion:
-    GENERATIONS = 30000
+    GENERATIONS = 100
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(GENERATIONS, 0.1, 0.05, num_trips, len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
+    population = genetic.main(GENERATIONS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
     best_individual = max(population, key=lambda ind: ind.score)
 
