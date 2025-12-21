@@ -149,10 +149,10 @@ mod genetic {
                 let trans_dif: f32 = next.time as f32 - current.time as f32;
                 let simulated_time = search_time(current.detector, next.detector, simulated_times);
                 if (simulated_time.from_detector == 9999 && simulated_time.avg == -1.0){
-                    penalty += 10000.0;
+                    penalty += 1000.0;
                     continue;
                 }
-                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.01); //x² funktion * 0.01 <- sonst zu stark
+                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.0001); //x² funktion * 0.01 <- sonst zu stark
             }
         }
         let score = 1.0 / (1.0 + (time_dif + penalty));
@@ -335,6 +335,38 @@ mod genetic {
         mutant
     }
 
+    //Split Mutation (Trips)
+    fn mutation_split(mut mutant:Individual) -> Individual {
+        let genome_len = mutant.genome.len();
+        let max_id = *mutant.genome.iter().max().unwrap_or(&0);
+
+        // Wähle zufällig einen Trip zum Splitten aus
+        let id_pick = rand::thread_rng().gen_range(0..genome_len);
+        let target_trip_id = mutant.genome[id_pick];
+
+        // Sammle alle Transaktionen, die zu diesem Trip gehören
+        let mut transaction_ids: Vec<usize> = Vec::new();
+        for i in 0..genome_len{
+            if(mutant.genome[i] == target_trip_id){
+                transaction_ids.push(i);
+            }
+        }
+
+        let ids_length: usize =  transaction_ids.len();
+
+        if ids_length < 2 { return mutant; } // Trip mit nur 1 Transaktion kann nicht gesplittet werden
+
+        // Alles ab diesem Punkt bekommt die NEUE ID
+        let split_point: usize = rand::thread_rng().gen_range(1..ids_length);
+
+        for i in split_point..ids_length {
+        mutant.genome[transaction_ids[i]] = max_id + 1; //max_id + 1 = new_id
+    }
+
+        mutant.score = -1.0;
+        mutant
+    }
+
     //Elitism
     fn select_elitism(population: &mut Vec<Individual>, selection_size: usize) -> Vec<Individual>{
         //https://www.woodruff.dev/day-12-genetic-algorithms-elitism-for-evolution-survival-of-the-fittest/
@@ -475,15 +507,15 @@ mod genetic {
                     child1 = mutation_small(child1);
                 }
                 if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                    child2 = mutation_small(child2);
+                    child2 = mutation_big(child2);
                 }
 
                 // Apply big mutation (scramble) with probability
                 if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                    child1 = mutation_big(child1);
+                    child1 = mutation_split(child1);
                 }
                 if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                    child2 = mutation_big(child2);
+                    child2 = mutation_split(child2);
                 }
 
                 //Score childs
