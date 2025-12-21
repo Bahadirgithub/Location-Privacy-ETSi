@@ -5,31 +5,57 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
     let mut time_dif: f64 = 0.0;
     let mut penalty: f64 = 0.0;
+    let mut bonus: f64 = 0.0;
 
-    let d = (transactions.len() as f64 - max_trip_id as f64).abs();
-    penalty += d.powf(2.0) * 0.0001;
+    penalty += max_trip_id as f64 * 100.0;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
     for trip in trips{
+        if trip.len() < 2 {
+            penalty += 1500.0; // Harte Strafe für Singles
+        } else if trip.len() < 3 {
+            penalty += 100.0; // Leichte Strafe für sehr kurze Trips
+        }
         for window in trip.windows(2) {
             let current = window[0];
             let next = window[1];
 
             //Zeitabweichung berechnen
             let trans_dif: f32 = next.time as f32 - current.time as f32;
+
+            //30min Pause
+            if trans_dif > 1800.0 {
+                penalty += 1000.0;
+            }
+
             let simulated_time = search_time(current.detector, next.detector, simulated_times);
             if simulated_time.from_detector == 9999 && simulated_time.avg == -1.0 {
-                penalty += 1000.0;
+                if trans_dif > 0.0 && trans_dif < 3600.0 {
+                    penalty += 500.0;
+                    
+                    // Wir addieren trotzdem eine kleine Zeitstrafe (linear)
+                    time_dif += trans_dif as f64 * 0.1;
+                } else {
+                    // Unmögliche Zeit -> Teleportation -> Strafe höher als Split
+                    penalty += 5000.0;
+                }
                 continue;
             }
-            time_dif += f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.001; //x² funktion * 0.01 <- sonst zu stark
+
+            if trans_dif <= simulated_time.max || trans_dif >= simulated_time.min{
+                //bonus
+                bonus += 25.0;
+            }
+            else{
+                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0)) * 0.05; //x² funktion * 0,05
+            }
         }
     }
     let bad = time_dif + penalty;
-    let good = 0.0;
+    let good = bonus;
     let score = (1.0 + good) / (1.0 + bad);
 
     score

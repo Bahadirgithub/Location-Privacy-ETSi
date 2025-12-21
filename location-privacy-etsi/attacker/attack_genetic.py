@@ -516,8 +516,8 @@ def main():
         rust_sim_times.append(t_obj)
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 1400 #6000
-    GENERATIONS_WALLETS = 8000 #12000
+    GENERATIONS_TRIPS = 5000 #6000
+    GENERATIONS_WALLETS = 100 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]

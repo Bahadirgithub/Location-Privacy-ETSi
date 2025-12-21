@@ -140,7 +140,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
         //https://www.woodruff.dev/day-32-when-genetic-algorithms-go-wrong-debugging-poor-performance-and-premature-convergence/
         //Mutation Rate
-        if no_improvement_generations == 50{
+        if no_improvement_generations == 10{
             mutation_rate *= 1.2;
         }
         let mut next_generation: Vec<Individual>;
@@ -221,7 +221,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
         //https://www.woodruff.dev/day-32-when-genetic-algorithms-go-wrong-debugging-poor-performance-and-premature-convergence/
         //Mutation Rate
-        if no_improvement_generations == 50{
+        if no_improvement_generations == 25{
             mutation_rate *= 1.2;
         }
 
