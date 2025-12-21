@@ -127,14 +127,14 @@ mod genetic {
                 return simulated_times[i].clone();
             }
         }
-        panic!("No Transaction in Simulated Times found! from_detector: {}, to_detector: {}", from_id, to_id); //Bricht die Berechnung ab (später besser behandeln!!!)
+        return SimulatedTime { from_detector: 9999, to_detector: 9999, avg: -1.0, min: -1.0, max: -1.0 }; //Nothing found! -> 9999 detectors and -1 time
     }
 
     fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
         let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
-        println!("max trip id: {}", max_trip_id);
         let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
         let mut time_dif: f64 = 0.0;
+        let mut penalty: f64 = 0.0;
 
         for (trans_id, trip_id) in individual.iter().enumerate() {
             trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
@@ -148,11 +148,16 @@ mod genetic {
                 //Zeitabweichung berechnen
                 let trans_dif: f32 = next.time as f32 - current.time as f32;
                 let simulated_time = search_time(current.detector, next.detector, simulated_times);
-                time_dif += f64::powf((trans_dif - simulated_time.avg) as f64, 2.0); //x² funktion
+                if (simulated_time.from_detector == 9999 && simulated_time.avg == -1.0){
+                    penalty += 10000.0;
+                    continue;
+                }
+                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.01); //x² funktion * 0.01 <- sonst zu stark
             }
         }
+        let score = 1.0 / (1.0 + (time_dif + penalty));
 
-        1.0 / (time_dif + 1.0)
+        score
     }
 
     fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> f64 {
@@ -257,7 +262,7 @@ mod genetic {
     }
 
     //Two-Point Crossover
-    fn crossover(parent_1:Individual, parent_2:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> (Individual, Individual){
+    fn crossover(parent_1:Individual, parent_2:Individual) -> (Individual, Individual){
         //https://www.geeksforgeeks.org/machine-learning/crossover-in-genetic-algorithm/
         let genome_size = parent_1.genome.len();
 
@@ -283,14 +288,14 @@ mod genetic {
             }
         }
 
-        child_1.score = fitness_wallet(&child_1.genome, num_wallets, &trip_cost, &sorted_wallets);
-        child_2.score = fitness_wallet(&child_2.genome, num_wallets, &trip_cost, &sorted_wallets);
+        child_1.score = -1.0;
+        child_2.score = -1.0;
 
         (child_1, child_2)
     }
 
     //Swap Mutation
-    fn mutation_small(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
+    fn mutation_small(mut mutant:Individual) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
         let genome_size = mutant.genome.len();
 
@@ -307,13 +312,13 @@ mod genetic {
         mutant.genome[rand_2] = temp;
 
         //Calculate fitness_wallet
-        mutant.score = fitness_wallet(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+        mutant.score = -1.0;
 
         mutant
     }
 
     //Scramble Mutation
-    fn mutation_big(mut mutant:Individual, num_wallets:usize, trip_cost:&[Trip], sorted_wallets:&[u32]) -> Individual {
+    fn mutation_big(mut mutant:Individual) -> Individual {
         //https://www.tutorialspoint.com/genetic_algorithms/genetic_algorithms_mutation.htm
         let genome_size = mutant.genome.len();
 
@@ -324,8 +329,8 @@ mod genetic {
         let slice = &mut mutant.genome[rand_1..rand_2];
         slice.shuffle(&mut rand::thread_rng());
 
-        //Calculate fitness_wallet
-        mutant.score = fitness_wallet(&mutant.genome, num_wallets, &trip_cost, &sorted_wallets);
+        //Calculate fitness_wallet later
+        mutant.score = -1.0;
 
         mutant
     }
@@ -384,6 +389,32 @@ mod genetic {
         result
     }
 
+    fn initial_trip_pop(individual: &[u32], population_size: u32, transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> Vec<Individual>{
+        let mut population: Vec<Individual> = Vec::new();
+        //original trip
+        population.push(Individual{
+            genome: individual.to_vec(),
+            score: fitness_trip(individual, transactions, simulated_times)
+        });
+        for i in 1..(population_size){ //Erste Hälfte
+            let mut ind = Individual{
+                genome: individual.to_vec(),
+                score: -1.0,
+            };
+            if i <= population_size / 2{
+                ind = mutation_small(ind);
+            }
+            else {
+                ind = mutation_big(ind);
+            }
+            //score
+            ind.score = fitness_trip(&ind.genome, transactions, simulated_times);
+
+            population.push(ind);
+        }
+        population
+    }
+
     //Main Function
     #[pyfunction]
     fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> Vec<Individual>{
@@ -391,17 +422,95 @@ mod genetic {
 
         //Main Loop Trips
         //Init
-        //let mut num_trips: usize = 1;
-        //let mut trips: Vec<Trip> = vec![Trip { id: 0, cost: 0, start_time: 0, end_time: 0, start_loc_id: 0, end_loc_id: 0 }; num_trips];
-
+        
         println!("Initial fitness score: {}", fitness_trip(&initial_population_trips, &transactions, &simulated_times));
 
-        let mut trips = generate_Trips(&initial_population_trips, &transactions);
-        let mut num_trips: usize = trips.len();
         //Initialize initial populations
+        let mut population = initial_trip_pop(&initial_population_trips, population_size, &transactions, &simulated_times);
+        let mut mutation_rate = 1.0;
+        let mut previous_score = population[0].score;
+        let mut no_improvement_generations = 0;
+        let mut best_score = 0.0;
         for i in 0..5000{
 
+            //Store best individuals
+            let mut best_individual = population[0].clone();
+            let mut population_sum = 0.0;
+            for j in 0..population.len(){
+                if population[j].score > best_individual.score{
+                    best_individual = population[j].clone();
+                }
+                population_sum += population[j].score;
+            }
+            best_score = best_individual.score;
+            if best_score <= previous_score{
+                no_improvement_generations += 1;
+            }
+            else{
+                no_improvement_generations = 0;
+            }
+            let avg_score = population_sum / (population.len() as f64);
+            println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
+
+            let elite_count = (population.len() as f64 * 0.02) as usize;
+            let parents = selection(&population, population_size as usize, 7);
+
+            //Select the best individuals
+            let elites = select_elitism(&mut population, elite_count);
+
+            //https://www.woodruff.dev/day-32-when-genetic-algorithms-go-wrong-debugging-poor-performance-and-premature-convergence/
+            //Mutation Rate
+            if no_improvement_generations == 50{
+                mutation_rate *= 1.2;
+            }
+                        let mut next_generation: Vec<Individual> = Vec::new();
+            for j in (0..parents.len()).step_by(2){
+                let parent1 = &parents[j];
+                let parent2 = &parents[j + 1];
+
+                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone());
+
+                // Apply small mutation (swap) with probability
+                if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
+                    child1 = mutation_small(child1);
+                }
+                if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
+                    child2 = mutation_small(child2);
+                }
+
+                // Apply big mutation (scramble) with probability
+                if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
+                    child1 = mutation_big(child1);
+                }
+                if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
+                    child2 = mutation_big(child2);
+                }
+
+                //Score childs
+                child1.score = fitness_trip(&child1.genome, &transactions, &simulated_times);
+                child2.score = fitness_trip(&child2.genome, &transactions, &simulated_times);
+
+                next_generation.push(child1);
+                next_generation.push(child2);
+            }
+            //Overwrite the worst Indivuduals of next generation with the best indivuduals of the previous
+            next_generation = apply_elitism(&mut next_generation, elites);
+
+            population = next_generation;
+            previous_score = best_score;
+
         } //-> Return trips + num_trips
+
+        let mut best_trip = population[0].clone();
+        for trip in population{
+            if trip.score > best_trip.score{
+                best_trip = trip;
+            }
+        }
+
+        let trips = generate_Trips(&best_trip.genome, &transactions);
+        let num_trips: usize = trips.len();
+        
 
         //Main Loop Wallets
         //Init
@@ -460,23 +569,27 @@ mod genetic {
                 let parent1 = &parents[j];
                 let parent2 = &parents[j + 1];
 
-                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone(), num_wallets as usize, &trips, &sorted_wallets);
+                let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone());
 
                 // Apply small mutation (swap) with probability
                 if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                    child1 = mutation_small(child1, num_wallets, &trips, &sorted_wallets);
+                    child1 = mutation_small(child1);
                 }
                 if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                    child2 = mutation_small(child2, num_wallets, &trips, &sorted_wallets);
+                    child2 = mutation_small(child2);
                 }
 
                 // Apply big mutation (scramble) with probability
                 if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                    child1 = mutation_big(child1, num_wallets, &trips, &sorted_wallets);
+                    child1 = mutation_big(child1);
                 }
                 if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                    child2 = mutation_big(child2, num_wallets, &trips, &sorted_wallets);
+                    child2 = mutation_big(child2);
                 }
+
+                //Score childs
+                child1.score = fitness_wallet(&child1.genome, num_wallets, &trips, &sorted_wallets);
+                child2.score = fitness_wallet(&child2.genome, num_wallets, &trips, &sorted_wallets);
 
                 next_generation.push(child1);
                 next_generation.push(child2);
