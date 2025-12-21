@@ -136,6 +136,9 @@ mod genetic {
         let mut time_dif: f64 = 0.0;
         let mut penalty: f64 = 0.0;
 
+        let factor = 6.0;
+        penalty += (1.0 / (1.0 + f64::powf((transactions.len() - max_trip_id) as f64, factor))) * 1000.0;
+
         for (trans_id, trip_id) in individual.iter().enumerate() {
             trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
         }
@@ -155,7 +158,9 @@ mod genetic {
                 time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.0001); //x² funktion * 0.01 <- sonst zu stark
             }
         }
-        let score = 1.0 / (1.0 + (time_dif + penalty));
+        let bad = time_dif + penalty;
+        let good = 0.0;
+        let score = (1.0 + good) / (1.0 + bad);
 
         score
     }
