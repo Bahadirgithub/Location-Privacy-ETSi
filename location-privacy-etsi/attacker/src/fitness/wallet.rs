@@ -56,3 +56,14 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
 
     score
 }
+
+pub fn calculate_wallet_fitness(population: Vec<Individual>, num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> Vec<Individual>{
+    let mut result: Vec<Individual> = Vec::new();
+    for ind in population{
+        result.push(Individual{
+            genome: ind.genome.clone(),
+            score: fitness_wallet(&ind.genome, num_wallets, trips, sorted_wallets)
+        });
+    }
+    result
+}

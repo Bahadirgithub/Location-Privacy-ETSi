@@ -1,4 +1,4 @@
-use crate::types::*;
+use crate::{ga::population, types::*};
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
@@ -21,11 +21,11 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             //Zeitabweichung berechnen
             let trans_dif: f32 = next.time as f32 - current.time as f32;
             let simulated_time = search_time(current.detector, next.detector, simulated_times);
-            if (simulated_time.from_detector == 9999 && simulated_time.avg == -1.0){
+            if simulated_time.from_detector == 9999 && simulated_time.avg == -1.0 {
                 penalty += 1000.0;
                 continue;
             }
-            time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.001); //x² funktion * 0.01 <- sonst zu stark
+            time_dif += f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.001; //x² funktion * 0.01 <- sonst zu stark
         }
     }
     let bad = time_dif + penalty;
@@ -37,9 +37,20 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
 fn search_time(from_id: u32, to_id: u32, simulated_times: &[SimulatedTime]) -> SimulatedTime {
     for i in 0..simulated_times.len() {
-        if ((simulated_times[i].from_detector == from_id) && (simulated_times[i].to_detector == to_id)){
+        if (simulated_times[i].from_detector == from_id) && (simulated_times[i].to_detector == to_id){
             return simulated_times[i].clone();
         }
     }
     return SimulatedTime { from_detector: 9999, to_detector: 9999, avg: -1.0, min: -1.0, max: -1.0 }; //Nothing found! -> 9999 detectors and -1 time
+}
+
+pub fn calculate_trip_fitness(population: Vec<Individual>, transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> Vec<Individual>{
+    let mut result: Vec<Individual> = Vec::new();
+    for ind in population{
+        result.push(Individual{
+            genome: ind.genome.clone(),
+            score: fitness_trip(&ind.genome, transactions, simulated_times)
+        });
+    }
+    result
 }

@@ -16,6 +16,7 @@ use crate::ga::{
     population::*,
     crossover::*,
     mutation::*,
+    evolution::*,
 };
 
 use rand::{Rng, seq::SliceRandom};
@@ -50,7 +51,7 @@ impl Transaction {
 #[pymethods]
 impl Individual {
     #[new]
-    fn new(genome_trip: Vec<u32>, genome: Vec<u32>, score: f64) -> Self {
+    fn new(genome: Vec<u32>, score: f64) -> Self {
         Individual { genome, score }
     }
 
@@ -100,7 +101,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
     //Initialize initial populations
     let mut population = initial_trip_pop(&initial_population_trips, population_size, &transactions, &simulated_times);
-    let mut mutation_rate = 1.0;
+    let mut mutation_rate: f32 = 1.0;
     let mut previous_score = population[0].score;
     let mut no_improvement_generations = 0;
     let mut best_score = 0.0;
@@ -136,36 +137,13 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         if no_improvement_generations == 50{
             mutation_rate *= 1.2;
         }
-                    let mut next_generation: Vec<Individual> = Vec::new();
-        for j in (0..parents.len()).step_by(2){
-            let parent1 = &parents[j];
-            let parent2 = &parents[j + 1];
+        let mut next_generation: Vec<Individual>;
 
-            let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone());
+        //Evolution
+        population = evolution(parents, mutation_rate, p_mutation_small, p_mutation_big, 0.05, 0.05); //später ändern
+        //Fitness berechnen
+        next_generation = calculate_trip_fitness(population, &transactions, &simulated_times);
 
-            // Apply small mutation (swap) with probability
-            if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                child1 = mutation_small(child1);
-            }
-            if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                child2 = mutation_big(child2);
-            }
-
-            // Apply big mutation (scramble) with probability
-            if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                child1 = mutation_split(child1);
-            }
-            if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                child2 = mutation_merge(child2);
-            }
-
-            //Score childs
-            child1.score = fitness_trip(&child1.genome, &transactions, &simulated_times);
-            child2.score = fitness_trip(&child2.genome, &transactions, &simulated_times);
-
-            next_generation.push(child1);
-            next_generation.push(child2);
-        }
         //Overwrite the worst Indivuduals of next generation with the best indivuduals of the previous
         next_generation = apply_elitism(&mut next_generation, elites);
 
@@ -238,36 +216,13 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
             mutation_rate *= 1.2;
         }
 
-        let mut next_generation: Vec<Individual> = Vec::new();
-        for j in (0..parents.len()).step_by(2){
-            let parent1 = &parents[j];
-            let parent2 = &parents[j + 1];
+        let mut next_generation: Vec<Individual>;
 
-            let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone());
+        //Evolution
+        population = evolution(parents, mutation_rate, p_mutation_small, p_mutation_big, 0.0, 0.0); //später ändern
+        //Fitness berechnen
+        next_generation = calculate_wallet_fitness(population, num_wallets, &trips, &sorted_wallets);
 
-            // Apply small mutation (swap) with probability
-            if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                child1 = mutation_small(child1);
-            }
-            if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
-                child2 = mutation_small(child2);
-            }
-
-            // Apply big mutation (scramble) with probability
-            if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                child1 = mutation_big(child1);
-            }
-            if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                child2 = mutation_big(child2);
-            }
-
-            //Score childs
-            child1.score = fitness_wallet(&child1.genome, num_wallets, &trips, &sorted_wallets);
-            child2.score = fitness_wallet(&child2.genome, num_wallets, &trips, &sorted_wallets);
-
-            next_generation.push(child1);
-            next_generation.push(child2);
-        }
         //Overwrite the worst Indivuduals of next generation with the best indivuduals of the previous
         next_generation = apply_elitism(&mut next_generation, elites);
 

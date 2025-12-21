@@ -68,7 +68,7 @@ pub fn mutation_split(mut mutant:Individual) -> Individual {
     // Sammle alle Transaktionen, die zu diesem Trip gehören
     let mut transaction_ids: Vec<usize> = Vec::new();
     for i in 0..genome_len{
-        if(mutant.genome[i] == id_target){
+        if mutant.genome[i] == id_target{
             transaction_ids.push(i);
         }
     }
