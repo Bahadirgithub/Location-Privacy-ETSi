@@ -26,7 +26,7 @@ mod genetic {
         #[pyo3(get, set)]
         detector: u32,
         #[pyo3(get, set)]
-        time: f32,
+        time: u32,
         #[pyo3(get, set)]
         cost: f32,
     }
@@ -78,7 +78,7 @@ mod genetic {
     #[pymethods]
     impl Transaction {
         #[new]
-        fn new(id: u32, detector: u32, time: f32, cost: f32) -> Self {
+        fn new(id: u32, detector: u32, time: u32, cost: f32) -> Self {
             Transaction { id, detector, time, cost }
         }
 
@@ -139,8 +139,6 @@ mod genetic {
         for (trans_id, trip_id) in individual.iter().enumerate() {
             trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
         }
-
-        let num_trips: usize = trips.len();
 
         for trip in trips{
             for window in trip.windows(2) {
@@ -358,6 +356,33 @@ mod genetic {
 
         population.to_vec()
     }
+    fn generate_Trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>{
+        let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
+        let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
+        let mut result: Vec<Trip> = Vec::new();
+
+        for (trans_id, trip_id) in individual.iter().enumerate() {
+            trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
+        }
+
+        for (trip_id, trip_trans) in trips.iter().enumerate() {
+            let mut trip_cost: f32 = 0.0;
+            let trip_lenght = trip_trans.len();
+            for trans in trip_trans{
+                trip_cost += trans.cost;
+            }
+            let obj = Trip {
+                id: trip_id,
+                cost: trip_cost.round() as u32,
+                start_time: trip_trans[0].time,
+                end_time: trip_trans[trip_lenght-1].time,
+                start_loc_id: trip_trans[0].detector as usize,
+                end_loc_id: trip_trans[trip_lenght-1].detector as usize,
+            };
+            result.push(obj);
+        }
+        result
+    }
 
     //Main Function
     #[pyfunction]
@@ -366,11 +391,13 @@ mod genetic {
 
         //Main Loop Trips
         //Init
-        let mut num_trips: usize = 1;
-        let mut trips: Vec<Trip> = vec![Trip { id: 0, cost: 0, start_time: 0, end_time: 0, start_loc_id: 0, end_loc_id: 0 }; num_trips];
+        //let mut num_trips: usize = 1;
+        //let mut trips: Vec<Trip> = vec![Trip { id: 0, cost: 0, start_time: 0, end_time: 0, start_loc_id: 0, end_loc_id: 0 }; num_trips];
 
         println!("Initial fitness score: {}", fitness_trip(&initial_population_trips, &transactions, &simulated_times));
 
+        let mut trips = generate_Trips(&initial_population_trips, &transactions);
+        let mut num_trips: usize = trips.len();
         //Initialize initial populations
         for i in 0..5000{
 
