@@ -516,22 +516,32 @@ def main():
         rust_sim_times.append(t_obj)
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 6000
-    GENERATIONS_WALLETS = 12000
+    GENERATIONS_TRIPS = 3000 #6000
+    GENERATIONS_WALLETS = 12000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
+    (population_trips, population_wallets) = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
-    best_individual = max(population, key=lambda ind: ind.score)
+    print("Reconstructing results...")
+
+    best_trip = max(population_trips, key=lambda ind: ind.score)
+    best_wallet = max(population_wallets, key=lambda ind: ind.score)
+    best_individual = best_wallet.score
 
     wallet_assignments = {i: [] for i in range(len(walletCosts))}
 
-    for trip_index, wallet_id in enumerate(best_individual.genome):
-        if wallet_id < len(walletCosts):
-            original_trip = results[trip_index]
-            wallet_assignments[wallet_id].append(original_trip)
+    # Wir gehen jede Transaktion durch (Reihenfolge wie in transactions_attacker_knowlege)
+    for trans_idx, assigned_trip_id in enumerate(best_trip.genome):
+        # Sicherheitscheck: Hat dieser Trip (ggf. neu durch Split) ein Wallet?
+        if assigned_trip_id < len(best_wallet.genome):
+            wallet_id = best_wallet.genome[assigned_trip_id]
+
+            if wallet_id < len(walletCosts):
+                # Die echte ID aus dem XML holen
+                original_trip = transactions_attacker_knowlege[trans_idx].attrib['id']
+                wallet_assignments[wallet_id].append(original_trip)
 
 
     #write wallet results
@@ -539,15 +549,12 @@ def main():
     for wallet_id in range(len(walletCosts)):
         assigned_trips = wallet_assignments[wallet_id]
 
-        all_transaction_ids = []
-        for trip in assigned_trips:
-            all_transaction_ids.extend(trip.used)
+        ids_string = " ".join(map(str, assigned_trips))
+        ET.SubElement(wallets_xml, "wallet", ids=ids_string)
 
-        strList = list(map(str, all_transaction_ids))
-        ET.SubElement(wallets_xml, "wallet", ids=" ".join(strList))
     tree = ET.ElementTree(output_root)
     tree.write('attacks/' + output_file_name)
-   
+
     print('Finished')
 
 

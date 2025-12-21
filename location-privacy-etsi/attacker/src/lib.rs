@@ -340,6 +340,19 @@ mod genetic {
         let genome_len = mutant.genome.len();
         let max_id = *mutant.genome.iter().max().unwrap_or(&0);
 
+        let mut used_ids = vec![false; (max_id + 1) as usize];
+        for &id in &mutant.genome {
+            used_ids[id as usize] = true;
+        }
+
+        let mut new_id = max_id + 1;
+        for (id, &is_used) in used_ids.iter().enumerate() {
+            if !is_used {
+                new_id = id as u32;
+                break;
+            }
+        }
+
         // Wähle zufällig einen Trip zum Splitten aus
         let id_pick = rand::thread_rng().gen_range(0..genome_len);
         let target_trip_id = mutant.genome[id_pick];
@@ -360,7 +373,7 @@ mod genetic {
         let split_point: usize = rand::thread_rng().gen_range(1..ids_length);
 
         for i in split_point..ids_length {
-        mutant.genome[transaction_ids[i]] = max_id + 1; //max_id + 1 = new_id
+        mutant.genome[transaction_ids[i]] = new_id;
     }
 
         mutant.score = -1.0;
@@ -403,6 +416,7 @@ mod genetic {
         }
 
         for (trip_id, trip_trans) in trips.iter().enumerate() {
+            if trip_trans.is_empty() { continue; }
             let mut trip_cost: f32 = 0.0;
             let trip_lenght = trip_trans.len();
             for trans in trip_trans{
@@ -449,7 +463,7 @@ mod genetic {
 
     //Main Function
     #[pyfunction]
-    fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> Vec<Individual>{
+    fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> (Vec<Individual>, Vec<Individual>){
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Main Loop Trips
@@ -532,6 +546,7 @@ mod genetic {
             previous_score = best_score;
 
         } //-> Return trips + num_trips
+        let population_trips = population.clone();
 
         let mut best_trip = population[0].clone();
         for trip in population{
@@ -635,7 +650,7 @@ mod genetic {
             pb.inc(1);
         }
         pb.finish_with_message(format!("Finished! Best Score: {}", best_score.to_string()));
-        population
+        (population, population_trips)
     }
 
     //funktion um fitness_wallet von python aus aufzurufen

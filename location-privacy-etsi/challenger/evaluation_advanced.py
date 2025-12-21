@@ -28,7 +28,7 @@ def challengerTrips():
 
     # Compare the attacker trips with the challenger trips
     for trip in tqdm(root_attacker[0], desc="Challenger Trips"):
-        str_list = trip.attrib['ids'].split(' ')
+        str_list = trip.attrib['ids'].split()
         usedTrips = set(map(int, str_list))
 
         best_f1_for_this_trip = 0.0
@@ -64,7 +64,7 @@ def challengerWallets():
 
     # Compare the attacker wallets with the challenger wallets
     for wallet in tqdm(root_attacker[1], desc="Challenger Wallets"):
-        str_list = wallet.attrib['ids'].split(' ')
+        str_list = wallet.attrib['ids'].split()
         usedWallets = set(map(int, str_list))
 
         best_f1_for_this_wallet = 0.0
