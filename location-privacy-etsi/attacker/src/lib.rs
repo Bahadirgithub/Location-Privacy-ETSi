@@ -136,8 +136,8 @@ mod genetic {
         let mut time_dif: f64 = 0.0;
         let mut penalty: f64 = 0.0;
 
-        let factor = 6.0;
-        penalty += (1.0 / (1.0 + f64::powf((transactions.len() - max_trip_id) as f64, factor))) * 1000.0;
+        let d = (transactions.len() as f64 - max_trip_id as f64).abs();
+        penalty += d.powf(4.0);
 
         for (trans_id, trip_id) in individual.iter().enumerate() {
             trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
@@ -155,7 +155,7 @@ mod genetic {
                     penalty += 1000.0;
                     continue;
                 }
-                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.0001); //x² funktion * 0.01 <- sonst zu stark
+                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0) * 0.001); //x² funktion * 0.01 <- sonst zu stark
             }
         }
         let bad = time_dif + penalty;
@@ -360,12 +360,12 @@ mod genetic {
 
         // Wähle zufällig einen Trip zum Splitten aus
         let id_pick = rand::thread_rng().gen_range(0..genome_len);
-        let target_trip_id = mutant.genome[id_pick];
+        let id_target = mutant.genome[id_pick];
 
         // Sammle alle Transaktionen, die zu diesem Trip gehören
         let mut transaction_ids: Vec<usize> = Vec::new();
         for i in 0..genome_len{
-            if(mutant.genome[i] == target_trip_id){
+            if(mutant.genome[i] == id_target){
                 transaction_ids.push(i);
             }
         }
@@ -382,6 +382,45 @@ mod genetic {
     }
 
         mutant.score = -1.0;
+        mutant
+    }
+
+    fn mutation_merge(mut mutant:Individual) -> Individual {
+        let genome_len = mutant.genome.len();
+
+        let mut id_pick = rand::thread_rng().gen_range(0..genome_len);
+        let id_target = mutant.genome[id_pick];
+
+        let mut id_victim = id_target;
+        let mut alt_victim = id_target;
+        for i in 0..genome_len {
+            id_pick = rand::thread_rng().gen_range(0..genome_len);
+            if mutant.genome[id_pick] != id_target {
+                id_victim = mutant.genome[id_pick];
+                break;
+            }
+            else if mutant.genome[i] != id_target {
+                alt_victim = mutant.genome[i];
+            }
+        }
+        if (id_victim == id_target) && (alt_victim != id_target) { id_victim = alt_victim }
+        else { return mutant; } //Falls wir keinen anderen Trip gefunden haben
+
+        // Ersatze alle vorkommen von id_victim mit id_target
+        for gene in mutant.genome.iter_mut() {
+            if *gene == id_victim {
+                *gene = id_target;
+            }
+        }
+
+        // Setze die höchste TripId = id_victim, damit keine Lücken bleiben
+        let max_id = *mutant.genome.iter().max().unwrap_or(&0);
+        for gene in mutant.genome.iter_mut() {
+            if *gene == max_id {
+                *gene = id_victim;
+            }
+        }
+
         mutant
     }
 
@@ -534,7 +573,7 @@ mod genetic {
                     child1 = mutation_split(child1);
                 }
                 if rand::random::<f32>() < (p_mutation_big*mutation_rate) {
-                    child2 = mutation_split(child2);
+                    child2 = mutation_merge(child2);
                 }
 
                 //Score childs
