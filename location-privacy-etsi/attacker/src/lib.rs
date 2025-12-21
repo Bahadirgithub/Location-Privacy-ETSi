@@ -417,7 +417,7 @@ mod genetic {
 
     //Main Function
     #[pyfunction]
-    fn main(generations: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> Vec<Individual>{
+    fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f32, p_mutation_big:f32, population_size: u32, sorted_wallets: Vec<u32>, initial_population_trips: Vec<u32>, transactions: Vec<Transaction>, simulated_times: Vec<SimulatedTime>) -> Vec<Individual>{
         //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
         //Main Loop Trips
@@ -431,7 +431,7 @@ mod genetic {
         let mut previous_score = population[0].score;
         let mut no_improvement_generations = 0;
         let mut best_score = 0.0;
-        for i in 0..5000{
+        for i in 0..generations_trips{
 
             //Store best individuals
             let mut best_individual = population[0].clone();
@@ -521,7 +521,7 @@ mod genetic {
         let mut no_improvement_generations = 0;
         let mut best_score = 0.0;
         //Create a new progress bar: https://github.com/console-rs/indicatif/blob/HEAD/examples/download.rs
-        let pb = ProgressBar::new(generations as u64);
+        let pb = ProgressBar::new(generations_wallets as u64);
                 
         //Style of progress bar
         pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {current}/{total} ({eta}) {msg}")
@@ -530,7 +530,7 @@ mod genetic {
             .progress_chars("#>-"));
 
 
-        for i in 0..generations{
+        for i in 0..generations_wallets{
 
             //Store best individuals
             let mut best_individual = population[0].clone();

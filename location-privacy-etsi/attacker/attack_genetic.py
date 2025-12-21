@@ -516,12 +516,13 @@ def main():
         rust_sim_times.append(t_obj)
 
     # Genetische Funktion:
-    GENERATIONS = 100
+    GENERATIONS_TRIPS = 12000
+    GENERATIONS_WALLETS = 20000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(GENERATIONS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
+    population = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
     best_individual = max(population, key=lambda ind: ind.score)
 
