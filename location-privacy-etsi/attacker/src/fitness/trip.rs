@@ -1,4 +1,4 @@
-use crate::{ga::population, types::*};
+use crate::types::*;
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
@@ -7,7 +7,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
 
     let d = (transactions.len() as f64 - max_trip_id as f64).abs();
-    penalty += d.powf(4.0);
+    penalty += d.powf(2.0) * 0.0001;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen

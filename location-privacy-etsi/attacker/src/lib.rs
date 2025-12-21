@@ -14,14 +14,11 @@ use crate::fitness::{
 };
 use crate::ga::{
     population::*,
-    crossover::*,
-    mutation::*,
     evolution::*,
 };
 
-use rand::{Rng, seq::SliceRandom};
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use std::{cmp::min, fmt::Write};
+use std::fmt::Write;
 
 
 #[pymethods]
@@ -60,7 +57,7 @@ impl Individual {
     }
 }
 
-fn generate_Trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>{
+fn generate_trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
     let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
     let mut result: Vec<Trip> = Vec::new();
@@ -95,16 +92,23 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
     //https://www.datacamp.com/tutorial/genetic-algorithm-python
 
     //Main Loop Trips
+    println!("Starting Trip Generation:");
     //Init
-    
-    println!("Initial fitness score: {}", fitness_trip(&initial_population_trips, &transactions, &simulated_times));
-
     //Initialize initial populations
     let mut population = initial_trip_pop(&initial_population_trips, population_size, &transactions, &simulated_times);
     let mut mutation_rate: f32 = 1.0;
     let mut previous_score = population[0].score;
     let mut no_improvement_generations = 0;
     let mut best_score = 0.0;
+        //Create a new progress bar: https://github.com/console-rs/indicatif/blob/HEAD/examples/download.rs
+    let pb_trip = ProgressBar::new(generations_trips as u64);
+
+    //Style of progress bar
+    pb_trip.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {current}/{total} ({eta}) {msg}")
+        .unwrap()
+        .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+        .progress_chars("#>-"));
+
     for i in 0..generations_trips{
 
         //Store best individuals
@@ -124,7 +128,9 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
             no_improvement_generations = 0;
         }
         let avg_score = population_sum / (population.len() as f64);
-        println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
+
+        //println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
+        pb_trip.set_message(format!("Gen: {} | Best: {:.6} | Avg: {:.4}", i, best_score, avg_score));
 
         let elite_count = (population.len() as f64 * 0.02) as usize;
         let parents = selection(&population, population_size as usize, 7);
@@ -149,8 +155,10 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
         population = next_generation;
         previous_score = best_score;
-
+        // Update the progress bar
+        pb_trip.inc(1);
     } //-> Return trips + num_trips
+    pb_trip.finish_with_message(format!("Finished Trip Generation! Best Score: {}", best_score.to_string()));
     let population_trips = population.clone();
 
     let mut best_trip = population[0].clone();
@@ -160,11 +168,12 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         }
     }
 
-    let trips = generate_Trips(&best_trip.genome, &transactions);
+    let trips = generate_trips(&best_trip.genome, &transactions);
     let num_trips: usize = trips.len();
     
 
     //Main Loop Wallets
+    println!("Starting Wallet Generation:");
     //Init
     let num_wallets = sorted_wallets.len();
     let mut population = initial_population(population_size, num_trips, num_wallets, &trips, &sorted_wallets);
@@ -173,10 +182,10 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
     let mut no_improvement_generations = 0;
     let mut best_score = 0.0;
     //Create a new progress bar: https://github.com/console-rs/indicatif/blob/HEAD/examples/download.rs
-    let pb = ProgressBar::new(generations_wallets as u64);
+    let pb_wallet = ProgressBar::new(generations_wallets as u64);
             
     //Style of progress bar
-    pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {current}/{total} ({eta}) {msg}")
+    pb_wallet.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {current}/{total} ({eta}) {msg}")
         .unwrap()
         .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
         .progress_chars("#>-"));
@@ -202,7 +211,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         }
         let avg_score = population_sum / (population.len() as f64);
         //println!("Generation {}: Best score is {}, Avg Score is {}", i, best_score, avg_score);
-        pb.set_message(format!("Gen: {} | Best: {:.6} | Avg: {:.4}", i, best_score, avg_score));
+        pb_wallet.set_message(format!("Gen: {} | Best: {:.6} | Avg: {:.4}", i, best_score, avg_score));
 
         let elite_count = (population.len() as f64 * 0.02) as usize;
         let parents = selection(&population, population_size as usize, 7);
@@ -229,25 +238,23 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         population = next_generation;
         previous_score = best_score;
         // Update the progress bar
-        pb.inc(1);
+        pb_wallet.inc(1);
     }
-    pb.finish_with_message(format!("Finished! Best Score: {}", best_score.to_string()));
+    pb_wallet.finish_with_message(format!("Finished Wallet Generation! Best Score: {}", best_score.to_string()));
     (population, population_trips)
 }
 
-// --- MODUL REGISTRIERUNG (DAS WICHTIGSTE!) ---
+// --- MODUL REGISTRIERUNG ---
 // Der Funktionsname "genetic" muss mit dem Namen in Cargo.toml [lib] name = "genetic" übereinstimmen!
 #[pymodule]
 fn genetic(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 1. Klassen registrieren
-    // Hinweis: add_class funktioniert auch mit der Bound API weiterhin so
     m.add_class::<Transaction>()?;
     m.add_class::<Individual>()?;
     m.add_class::<SimulatedTime>()?;
     m.add_class::<Trip>()?;
 
     // 2. Funktionen registrieren
-    // wrap_pyfunction! benötigt jetzt das "Bound" Objekt 'm'
     m.add_function(wrap_pyfunction!(main, m)?)?;
 
     Ok(())
