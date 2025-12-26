@@ -516,7 +516,7 @@ def main():
         rust_sim_times.append(t_obj)
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 5000 #6000
+    GENERATIONS_TRIPS = 2500 #6000
     GENERATIONS_WALLETS = 100 #12000
     POPULATION_SIZE = 500
 

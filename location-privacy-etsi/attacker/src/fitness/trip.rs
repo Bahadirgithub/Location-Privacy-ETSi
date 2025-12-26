@@ -7,7 +7,9 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    penalty += max_trip_id as f64 * 100.0;
+    let num_active_trips = individual.iter().collect::<std::collections::HashSet<_>>().len();
+
+    penalty += num_active_trips as f64 * 2000.0;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
@@ -37,7 +39,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
                     penalty += 500.0;
                     
                     // Wir addieren trotzdem eine kleine Zeitstrafe (linear)
-                    time_dif += trans_dif as f64 * 0.1;
+                    time_dif += trans_dif as f64 * 0.01;
                 } else {
                     // Unmögliche Zeit -> Teleportation -> Strafe höher als Split
                     penalty += 5000.0;
@@ -45,9 +47,9 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
                 continue;
             }
 
-            if trans_dif <= simulated_time.max || trans_dif >= simulated_time.min{
+            if trans_dif <= simulated_time.max && trans_dif >= simulated_time.min{
                 //bonus
-                bonus += 25.0;
+                bonus += 50.0;
             }
             else{
                 time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0)) * 0.05; //x² funktion * 0,05
