@@ -1,4 +1,5 @@
 use crate::types::*;
+use rayon::prelude::*;
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
@@ -73,12 +74,10 @@ fn search_time(from_id: u32, to_id: u32, simulated_times: &[SimulatedTime]) -> S
 }
 
 pub fn calculate_trip_fitness(population: Vec<Individual>, transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> Vec<Individual>{
-    let mut result: Vec<Individual> = Vec::new();
-    for ind in population{
-        result.push(Individual{
+    population.into_par_iter().map(|ind| {
+        Individual {
             genome: ind.genome.clone(),
-            score: fitness_trip(&ind.genome, transactions, simulated_times)
-        });
-    }
-    result
+            score: fitness_trip(&ind.genome, transactions, simulated_times),
+        }
+    }).collect()
 }

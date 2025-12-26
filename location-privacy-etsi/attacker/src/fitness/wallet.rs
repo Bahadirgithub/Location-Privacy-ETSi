@@ -1,4 +1,5 @@
 use crate::types::*;
+use rayon::prelude::*;
 
 pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> f64 {
     let mut wallets: Vec<Vec<&Trip>> = vec![Vec::new(); num_wallets];
@@ -58,12 +59,10 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
 }
 
 pub fn calculate_wallet_fitness(population: Vec<Individual>, num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> Vec<Individual>{
-    let mut result: Vec<Individual> = Vec::new();
-    for ind in population{
-        result.push(Individual{
+    population.into_par_iter().map(|ind| {
+        Individual {
             genome: ind.genome.clone(),
-            score: fitness_wallet(&ind.genome, num_wallets, trips, sorted_wallets)
-        });
-    }
-    result
+            score: fitness_wallet(&ind.genome, num_wallets, trips, sorted_wallets),
+        }
+    }).collect()
 }
