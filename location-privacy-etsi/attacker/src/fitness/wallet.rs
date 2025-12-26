@@ -24,14 +24,16 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
 
     //check for plausibility
     for wallet_trips in wallets.iter_mut() {
+        let trip_count = wallet_trips.len();
+
         wallet_trips.sort_unstable_by_key(|t| t.start_time);
 
-        for i in 0..wallet_trips.len() - 1{
+        for i in 0..trip_count - 1{
             if i>0 && (wallet_trips[i].start_loc_id == wallet_trips[0].start_loc_id || wallet_trips[i].end_loc_id == wallet_trips[0].start_loc_id){
-                bonus += 1.0;
+                bonus += 10.0;
             }
             //Safe handling (Wenn einem Wallet weniger als 2 Trips hinzugefügt wurden)
-            if wallet_trips.len() <= 1{
+            if trip_count <= 1{
                 penalty += 1000.0; //Meist 2+ Trips Zuhause->Arbeit->Zuhause->...
                 break;
             }
@@ -40,20 +42,20 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
             let next = wallet_trips[i+1];
 
             if current.end_time > next.start_time{
-                penalty += 1000.0; //penalty prüfen
+                penalty += 5000.0; //penalty prüfen
             }
 
             //check for simmilarity in start and end location
             if current.end_loc_id != next.start_loc_id {
-                penalty += 100.0;
-            }
+                penalty += 1000.0;
+            }          
         }
     }
 
     let bad = (total_error as f64) + penalty;
     //let good = bonus;
     //let score = (1.0 + good) / (1.0 + bad);
-    let score = (1.0 + bonus) / (1.0 + bad);
+    let score = (10000.0 + bonus) / (1000.0 + bad);
 
     score
 }

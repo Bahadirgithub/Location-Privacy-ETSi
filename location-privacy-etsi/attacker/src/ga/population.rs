@@ -102,9 +102,10 @@ pub fn apply_elitism(population: &mut Vec<Individual>, elites: Vec<Individual>) 
 
     population.sort_by(|a, b| a.score.partial_cmp(&b.score).unwrap()); // sort ascending based on score
     //Schlechteste Ergebisse mit entfernen & eliten aus der letzen Generation hinzufügen
-    for i in 0..selection_size {
-        population.remove(i);
-        population.push(elites[i].clone());
+    population.drain(0..selection_size);
+    
+    for elite in elites{
+        population.push(elite);
     }
 
     population.to_vec()

@@ -1,5 +1,6 @@
 use crate::types::*;
 use rayon::prelude::*;
+use std::collections::HashSet;
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
@@ -8,20 +9,28 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    let num_active_trips = individual.iter().collect::<std::collections::HashSet<_>>().len();
-
-    penalty += num_active_trips as f64 * 2000.0;
+    let num_active_trips = individual.iter().collect::<HashSet<_>>().len();
+    penalty += (num_active_trips as f64) * 1000.0;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
-    for trip in trips{
-        if trip.len() < 2 {
-            penalty += 1500.0; // Harte Strafe für Singles
-        } else if trip.len() < 3 {
-            penalty += 100.0; // Leichte Strafe für sehr kurze Trips
+    for trip in trips.iter_mut(){
+        if trip.is_empty() {
+            penalty += 10000.0;
+            continue;
         }
+
+        trip.sort_unstable_by_key(|t| t.time); //Sortieren der Transaktionen nach Zeitpunkt
+
+        // Strafe für Singles
+        if trip.len() < 2 {
+            penalty += 500.0; 
+        } else if trip.len() < 3 {
+            penalty += 50.0; 
+        }
+
         for window in trip.windows(2) {
             let current = window[0];
             let next = window[1];
@@ -29,21 +38,21 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             //Zeitabweichung berechnen
             let trans_dif: f32 = next.time as f32 - current.time as f32;
 
-            //30min Pause
-            if trans_dif > 1800.0 {
+            if trans_dif > 7200.0 {
                 penalty += 1000.0;
+                continue;
             }
 
             let simulated_time = search_time(current.detector, next.detector, simulated_times);
+
             if simulated_time.from_detector == 9999 && simulated_time.avg == -1.0 {
-                if trans_dif > 0.0 && trans_dif < 3600.0 {
-                    penalty += 500.0;
-                    
-                    // Wir addieren trotzdem eine kleine Zeitstrafe (linear)
-                    time_dif += trans_dif as f64 * 0.01;
+                // Ist die Zeitdifferenz plausibel? (Größer 0 und kleiner als 30 Min)
+                if trans_dif > 0.0 && trans_dif < 1800.0 {
+                    penalty += 100.0; 
+                    time_dif += trans_dif as f64 * 0.1;
                 } else {
-                    // Unmögliche Zeit -> Teleportation -> Strafe höher als Split
-                    penalty += 5000.0;
+                    // Unmögliche Zeit (Teleportation) -> TÖDLICHE Strafe
+                    penalty += 10000.0; 
                 }
                 continue;
             }
@@ -53,13 +62,15 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
                 bonus += 50.0;
             }
             else{
-                time_dif += (f64::powf((trans_dif - simulated_time.avg) as f64, 2.0)) * 0.05; //x² funktion * 0,05
+                let diff = (trans_dif - simulated_time.avg) as f64;
+                let error = diff.powf(2.0) * 0.01;
+                time_dif += error.min(100.0);
             }
         }
     }
     let bad = time_dif + penalty;
     let good = bonus;
-    let score = (1.0 + good) / (1.0 + bad);
+    let score = (1000.0 + good) / (1000.0 + bad);
 
     score
 }

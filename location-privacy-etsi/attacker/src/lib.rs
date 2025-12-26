@@ -133,7 +133,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         pb_trip.set_message(format!("Gen: {} | Best: {:.6} | Avg: {:.4}", i, best_score, avg_score));
 
         let elite_count = (population.len() as f64 * 0.02) as usize;
-        let parents = selection(&population, population_size as usize, 7);
+        let parents = selection(&population, population_size as usize, 5);
 
         //Select the best individuals
         let elites = select_elitism(&mut population, elite_count);
@@ -146,7 +146,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         let mut next_generation: Vec<Individual>;
 
         //Evolution
-        population = evolution(parents, mutation_rate, p_mutation_small, p_mutation_big, 0.05, 0.05); //später ändern
+        population = evolution(parents, mutation_rate, 0.1, 0.0, 0.05, 0.40, true); //später ändern
         //Fitness berechnen
         next_generation = calculate_trip_fitness(population, &transactions, &simulated_times);
 
@@ -228,7 +228,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         let mut next_generation: Vec<Individual>;
 
         //Evolution
-        population = evolution(parents, mutation_rate, p_mutation_small, p_mutation_big, 0.0, 0.0); //später ändern
+        population = evolution(parents, mutation_rate, p_mutation_small, p_mutation_big, 0.0, 0.0, false); //später ändern
         //Fitness berechnen
         next_generation = calculate_wallet_fitness(population, num_wallets, &trips, &sorted_wallets);
 

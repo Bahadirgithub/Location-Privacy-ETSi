@@ -11,13 +11,23 @@ pub fn evolution(parents: Vec<Individual>,
                 p_mutation_big: f32,
                 p_mutation_split: f32,
                 p_mutation_merge: f32,
+                trip_generation: bool,
             ) -> Vec<Individual>{
     let mut next_generation: Vec<Individual> = Vec::new();
     for j in (0..parents.len()).step_by(2){
         let parent1 = &parents[j];
         let parent2 = &parents[j + 1];
 
-        let (mut child1, mut child2) = crossover(parent1.clone(), parent2.clone());
+        let mut child1: Individual;
+        let mut child2: Individual;
+
+        if !trip_generation{
+            (child1, child2) = crossover(parent1.clone(), parent2.clone());
+        }
+        else {
+            child1 = parent1.clone();
+            child2 = parent2.clone();
+        }
 
         // Apply small mutation (swap) with probability
         if rand::random::<f32>() < (p_mutation_small*mutation_rate) {
