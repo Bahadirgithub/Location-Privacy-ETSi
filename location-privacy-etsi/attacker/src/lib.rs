@@ -19,7 +19,7 @@ use crate::ga::{
 
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
 use std::fmt::Write;
-
+use std::collections::HashMap;
 
 #[pymethods]
 impl SimulatedTime {
@@ -93,9 +93,13 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
     //Main Loop Trips
     println!("Starting Trip Generation:");
-    //Init
+    //HashMap erstellen mit Key fromDet & toDet for O(1) Lookup
+    let mut time_map: HashMap<(u32, u32), SimulatedTime> = HashMap::new();
+    for time in simulated_times.iter() {
+        time_map.insert((time.from_detector, time.to_detector), time.clone());
+    }
     //Initialize initial populations
-    let mut population = initial_trip_pop(&initial_population_trips, population_size, &transactions, &simulated_times);
+    let mut population = initial_trip_pop(&initial_population_trips, population_size, &transactions, &time_map);
     let mut mutation_rate: f32 = 1.0;
     let mut previous_score = population[0].score;
     let mut no_improvement_generations = 0;
@@ -146,9 +150,9 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         let mut next_generation: Vec<Individual>;
 
         //Evolution
-        population = evolution(parents, mutation_rate, 0.1, 0.0, 0.05, 0.40, true); //später ändern
+        population = evolution(parents, mutation_rate, 0.05, 0.02, 0.2, 0.2, true); //später ändern
         //Fitness berechnen
-        next_generation = calculate_trip_fitness(population, &transactions, &simulated_times);
+        next_generation = calculate_trip_fitness(population, &transactions, &time_map);
 
         //Overwrite the worst Indivuduals of next generation with the best indivuduals of the previous
         next_generation = apply_elitism(&mut next_generation, elites);
@@ -170,6 +174,8 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
 
     let trips = generate_trips(&best_trip.genome, &transactions);
     let num_trips: usize = trips.len();
+    let num_transactions: usize = transactions.len();
+    println!("Trip Results: Number of Transactions: {}, Number of Trips: {}, Average Trip Size: {:.2}", num_transactions, num_trips, (num_transactions as f32 /num_trips as f32));
     
 
     //Main Loop Wallets

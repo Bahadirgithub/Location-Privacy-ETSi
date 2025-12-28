@@ -30,7 +30,7 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
 
         for i in 0..trip_count - 1{
             if i>0 && (wallet_trips[i].start_loc_id == wallet_trips[0].start_loc_id || wallet_trips[i].end_loc_id == wallet_trips[0].start_loc_id){
-                bonus += 10.0;
+                bonus += 30.0;
             }
             //Safe handling (Wenn einem Wallet weniger als 2 Trips hinzugefügt wurden)
             if trip_count <= 1{

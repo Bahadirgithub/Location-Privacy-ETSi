@@ -1,6 +1,7 @@
 use crate::types::*;
 use crate::fitness::{trip::*, wallet::*};
 use crate::ga::mutation::*;
+use std::collections::HashMap;
 
 use rand::{Rng, seq::SliceRandom};
 
@@ -35,7 +36,7 @@ pub fn initial_population(population_size: u32, num_trips: usize, num_wallets: u
     population
 }
 
-pub fn initial_trip_pop(individual: &[u32], population_size: u32, transactions: &[Transaction], simulated_times: &[SimulatedTime]) -> Vec<Individual>{
+pub fn initial_trip_pop(individual: &[u32], population_size: u32, transactions: &[Transaction], simulated_times: &HashMap<(u32, u32), SimulatedTime>) -> Vec<Individual>{
     let mut population: Vec<Individual> = Vec::new();
     //original trip
     population.push(Individual{
@@ -48,10 +49,10 @@ pub fn initial_trip_pop(individual: &[u32], population_size: u32, transactions: 
             score: -1.0,
         };
         if i <= population_size / 2{
-            ind = mutation_small(ind);
+            ind = mutation_split(ind);
         }
         else {
-            ind = mutation_big(ind);
+            ind = mutation_merge(ind);
         }
         //score
         ind.score = fitness_trip(&ind.genome, transactions, simulated_times);
