@@ -153,6 +153,18 @@ def detailed_report(f):
 
     # --- Ground Truth Listen vorbereiten ---
     challenger_trips_xml = root_challenger_knowledge[2]
+    truth_lengths = [len(trip) for trip in challenger_trips_xml]
+    avg_truth_len = sum(truth_lengths) / len(truth_lengths) if truth_lengths else 0.0
+
+    attacker_trips_xml = root_attacker[0]
+    pred_lengths = [len(trip.attrib['ids'].split()) for trip in attacker_trips_xml]
+    avg_pred_len = sum(pred_lengths) / len(pred_lengths) if pred_lengths else 0.0
+
+    f.write('\n-------------------- General Trip Statistics --------------------\n')
+    f.write(f'Average Trip Length (Ground Truth): {avg_truth_len:.2f} transactions\n')
+    f.write(f'Average Trip Length (Predicted):    {avg_pred_len:.2f} transactions\n')
+    f.write(f'Difference (Pred - Truth):          {avg_pred_len - avg_truth_len:.2f}\n')
+
     truth_trip_list = []
     for t in challenger_trips_xml:
         truth_trip_list.append(set(int(x.attrib['id']) for x in t))
