@@ -91,23 +91,22 @@ pub fn mutation_split(mut mutant:Individual) -> Individual {
 pub fn mutation_merge(mut mutant:Individual) -> Individual {
     let genome_len = mutant.genome.len();
 
-    let mut id_pick = rand::thread_rng().gen_range(0..genome_len);
+    let id_pick = rand::thread_rng().gen_range(0..genome_len);
     let id_target = mutant.genome[id_pick];
 
+    //Zufälligen Teil auswählen & den kleinsten Trip mergen
+    let tournament_size = 5;
+    let tournament:Vec<u32> = mutant.genome.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
     let mut id_victim = id_target;
-    let mut alt_victim = id_target;
-    for i in 0..genome_len {
-        id_pick = rand::thread_rng().gen_range(0..genome_len);
-        if mutant.genome[id_pick] != id_target {
-            id_victim = mutant.genome[id_pick];
-            break;
-        }
-        else if mutant.genome[i] != id_target {
-            alt_victim = mutant.genome[i];
+    let mut victim_trip_size = 9999;
+    for trip in tournament{
+        let trip_size = mutant.genome.iter().filter(|&n| *n == trip).count();
+        if trip_size < victim_trip_size{
+            victim_trip_size = trip_size;
+            id_victim = trip;
         }
     }
-    if (id_victim == id_target) && (alt_victim != id_target) { id_victim = alt_victim }
-    else { return mutant; } //Falls wir keinen anderen Trip gefunden haben
+    if id_victim == id_target { return mutant; } //Falls wir keinen anderen Trip gefunden haben
 
     // Ersatze alle vorkommen von id_victim mit id_target
     for gene in mutant.genome.iter_mut() {

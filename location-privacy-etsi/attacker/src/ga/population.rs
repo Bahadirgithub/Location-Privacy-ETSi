@@ -7,11 +7,25 @@ use rand::{Rng, seq::SliceRandom};
 
 fn create_individual(num_trips: usize, num_wallets: usize) -> Vec<u32>{
     let mut result = vec![0u32; num_trips];
+    let mut rng = rand::thread_rng();
 
-    for i in 0..num_trips {
-        let id = rand::thread_rng().gen_range(0..num_wallets) as u32;
-        result[i] = id;
-    }
+    let mut trip_indices: Vec<usize> = (0..num_trips).collect();
+    trip_indices.shuffle(&mut rng);
+
+    let mut trips_assigned_count = 0;
+
+    //Jedes Wallet muss mind. einmal vorkommen
+    let limit = std::cmp::min(num_trips, num_wallets);
+    for w_id in 0..limit {
+            let trip_idx = trip_indices[w_id];
+            result[trip_idx] = w_id as u32;
+            trips_assigned_count += 1;
+        }
+
+    for i in trips_assigned_count..num_trips {
+            let trip_idx = trip_indices[i];
+            result[trip_idx] = rng.gen_range(0..num_wallets) as u32;
+        }
     result
 }
 

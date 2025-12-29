@@ -514,12 +514,12 @@ def main():
         for (from_str, to_str), dts in pair_stats.items():
             count = len(dts)
 
-            # Route min 6x beobachtet UND konsistent (Varianz < 15)
-            if count >= 6:
+            # Route min 4x beobachtet UND konsistent (Varianz < 10)
+            if count >= 4:
                 avg = sum(dts) / count
                 variance = sum([(x - avg) ** 2 for x in dts]) / count
 
-                if variance < 15.0:
+                if variance < 10.0:
                     from_id = get_detector_id(from_str)
                     to_id = get_detector_id(to_str)
 
@@ -588,13 +588,13 @@ def main():
 
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 6000 #6000
-    GENERATIONS_WALLETS = 12000 #12000
+    GENERATIONS_TRIPS = 10000 #6000
+    GENERATIONS_WALLETS = 25000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    (population_trips, population_wallets) = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
+    (population_wallets, population_trips) = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
     print("Reconstructing results...")
 

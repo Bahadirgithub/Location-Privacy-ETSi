@@ -14,7 +14,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     }
 
     let num_active_trips = trips.iter().filter(|t| !t.is_empty()).count();
-    penalty += (num_active_trips as f64) * 2000.0;
+    penalty += (num_active_trips as f64) * 200.0;
 
     let mut location_stats: HashMap<u32, (i32, i32)> = HashMap::new();
 
@@ -41,6 +41,9 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             continue;
         }
         else if trip_len < 4 {
+            penalty += 2000.0;
+        }
+        else if trip_len > 20{
             penalty += 2000.0;
         }
         else {

@@ -66,20 +66,21 @@ fn generate_trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
-    for (trip_id, trip_trans) in trips.iter().enumerate() {
+    for (_, trip_trans) in trips.iter().enumerate() {
         if trip_trans.is_empty() { continue; }
         let mut trip_cost: f32 = 0.0;
-        let trip_lenght = trip_trans.len();
+        let trip_len = trip_trans.len();
         for trans in trip_trans{
             trip_cost += trans.cost;
         }
+        let continous_id = result.len(); //Trip Id Lücken schließen
         let obj = Trip {
-            id: trip_id,
+            id: continous_id,
             cost: trip_cost.round() as u32,
             start_time: trip_trans[0].time,
-            end_time: trip_trans[trip_lenght-1].time,
+            end_time: trip_trans[trip_len-1].time,
             start_loc_id: trip_trans[0].detector as usize,
-            end_loc_id: trip_trans[trip_lenght-1].detector as usize,
+            end_loc_id: trip_trans[trip_len-1].detector as usize,
         };
         result.push(obj);
     }
@@ -150,7 +151,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         let mut next_generation: Vec<Individual>;
 
         //Evolution
-        population = evolution(parents, mutation_rate, 0.1, 0.05, 0.3, 0.6, true); //Hohe Mutationsraten, da kein Crossover stattfindet
+        population = evolution(parents, mutation_rate, 0.1, 0.02, 0.2, 0.2, true); //Hohe Mutationsraten, da kein Crossover stattfindet
         //Fitness berechnen
         next_generation = calculate_trip_fitness(population, &transactions, &time_map);
 
