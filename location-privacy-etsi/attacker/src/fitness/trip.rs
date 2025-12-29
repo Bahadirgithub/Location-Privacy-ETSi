@@ -1,24 +1,51 @@
 use crate::types::*;
 use rayon::prelude::*;
-use std::collections::HashSet;
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &HashMap<(u32, u32), SimulatedTime>) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
     let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
-    let mut total_error: f64 = 0.0;
+    let mut time_dif: f64 = 0.0;
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
-
-    let num_active_trips = individual.iter().collect::<HashSet<_>>().len();
-    penalty += (num_active_trips as f64) * 500.0;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
+    let num_active_trips = trips.iter().filter(|t| !t.is_empty()).count();
+    penalty += (num_active_trips as f64) * 2000.0;
+
+    let mut location_stats: HashMap<u32, (i32, i32)> = HashMap::new();
+
     for trip in trips.iter_mut(){
         if trip.is_empty() { continue; }
+
+        // Start-/Enddetektor erfassen
+        let start_det = trip.first().unwrap().detector;
+        let end_det = trip.last().unwrap().detector;
+
+        let entry_start = location_stats.entry(start_det).or_insert((0, 0));
+        entry_start.0 += 1; // +1 Start Count
+
+        let entry_end = location_stats.entry(end_det).or_insert((0, 0));
+        entry_end.1 += 1; // +1 End Count
+
+        //Sortieren der Transaktionen nach Zeitpunkt
+        trip.sort_unstable_by_key(|t| t.time); 
+
+        let trip_len = trip.len();
+        //Bewertung der Trip-Länge
+        if trip_len < 2 {
+            penalty += 10000.0; //Auf keinen Fall einzelne Trips!
+            continue;
+        }
+        else if trip_len < 4 {
+            penalty += 2000.0;
+        }
+        else {
+            bonus += (trip_len as f64).powi(2) * 10.0;
+        }
 
         //Detektor darf nie doppel vorkommen
         let mut detectors_seen: HashSet<u32> = HashSet::new();
@@ -26,21 +53,9 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             let detector_id = trans.detector;
             if !detectors_seen.insert(detector_id){
                 //False bedeutet Id wurde bereits hinzugefügt
-                penalty += 5000.0;
+                penalty += 10000.0;
                 break;
             }
-        }
-
-
-        trip.sort_unstable_by_key(|t| t.time); //Sortieren der Transaktionen nach Zeitpunkt
-
-        let trip_len = trip.len();
-        //Bewertung der Trip-Länge
-        if trip_len < 2 {
-            penalty += 2000.0;
-            continue;
-        } else {
-            bonus += (trip_len as f64).powi(2) * 10.0;
         }
 
         //Segment-Analyse
@@ -87,7 +102,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
                 } else {
                     // Quadratische Strafe 
                     let violation = if dt < min_t { min_t - dt } else { dt - max_t };
-                    total_error += violation.powi(2) * 0.5;
+                    time_dif += violation.powi(2) * 0.1;
                     penalty += 50.0; // Grundstrafe für "Out of Bounds"
                 }
             }
@@ -97,7 +112,22 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             bonus += (trip_len as f64) * 100.0;
         }
     }
-    let score = (10000.0 + bonus) / (1.0 + total_error + penalty);
+    //Globale Analyse
+    for (_, (starts, ends)) in location_stats {
+        if starts > 0 && ends > 0 {
+            //Ort ist sowohl Start als auch Ende
+            bonus += 1000.0;
+        }
+
+        let total_usage = starts + ends;
+        if total_usage >= 4 {
+            //Ort wird öfters benutzt (HUB: Zuhause oder Arbeit)
+            bonus += 500.0 * (total_usage as f64);
+        }
+    }
+
+
+    let score = (100.0 + bonus) / (1.0 + time_dif + penalty);
 
     score
 }
