@@ -95,7 +95,7 @@ pub fn mutation_merge(mut mutant:Individual) -> Individual {
     let id_target = mutant.genome[id_pick];
 
     //Zufälligen Teil auswählen & den kleinsten Trip mergen
-    let tournament_size = 5;
+    let tournament_size = 10;
     let tournament:Vec<u32> = mutant.genome.choose_multiple(&mut rand::thread_rng(), tournament_size).cloned().collect();
     let mut id_victim = id_target;
     let mut victim_trip_size = 9999;

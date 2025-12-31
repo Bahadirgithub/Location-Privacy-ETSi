@@ -480,60 +480,6 @@ def main():
             detector_mapping[detector_name] = len(detector_mapping)
         return detector_mapping[detector_name]
 
-    def learn_topology_from_transactions(transactions_xml_list):
-        """
-        Lernt fehlende Verbindungen aus den Transaktionsdaten.
-        """
-        # Daten extrahieren
-        events = []
-        for t in transactions_xml_list:
-            det = t.attrib['detector']
-            time = float(t.attrib['time'])
-            events.append({'det': det, 'time': time})
-
-        events.sort(key=lambda x: x['time'])
-
-        # Häufige Paare finden (Fenster: 30s)
-        pair_stats = collections.defaultdict(list)
-        WINDOW = 30.0
-
-        for i in range(len(events)):
-            t1 = events[i]
-            for j in range(i + 1, len(events)):
-                t2 = events[j]
-                dt = t2['time'] - t1['time']
-
-                if dt > WINDOW: break  # Fenster zu Ende
-                if t1['det'] == t2['det']: continue  # Gleicher Detektor
-
-                pair_stats[(t1['det'], t2['det'])].append(dt)
-
-        # Prüfen
-        learned_objs = []
-
-        for (from_str, to_str), dts in pair_stats.items():
-            count = len(dts)
-
-            # Route min 4x beobachtet UND konsistent (Varianz < 10)
-            if count >= 4:
-                avg = sum(dts) / count
-                variance = sum([(x - avg) ** 2 for x in dts]) / count
-
-                if variance < 10.0:
-                    from_id = get_detector_id(from_str)
-                    to_id = get_detector_id(to_str)
-
-                    sim_obj = genetic.SimulatedTime(
-                        from_detector= from_id,
-                        to_detector= to_id,
-                        avg= avg,
-                        min= max(0.0, avg - 5.0),  # Min
-                        max= avg + 10.0  # Max
-                    )
-                    learned_objs.append(sim_obj)
-
-        return learned_objs
-
     rust_inital_pop = [0] * len(transactions_attacker_knowlege)
 
     # Build a dictionary for fast lookup
@@ -574,22 +520,9 @@ def main():
         rust_sim_times.append(t_obj)
         existing_routes.add((u, v))
 
-    learned_routes = learn_topology_from_transactions(transactions_attacker_knowlege)
-    added_routes = 0
-    for learned in learned_routes:
-        key = (learned.from_detector, learned.to_detector)
-
-        # Nur hinzufügen, wenn NICHT schon im XML war
-        if key not in existing_routes:
-            rust_sim_times.append(learned)
-            existing_routes.add(key)
-            added_routes += 1
-    print("Added: ", added_routes, " common Routes to Simulated Times")
-
-
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 10000 #6000
-    GENERATIONS_WALLETS = 25000 #12000
+    GENERATIONS_TRIPS = 6000 #6000
+    GENERATIONS_WALLETS = 12000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]

@@ -82,7 +82,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             if sim_data.from_detector == 9999 {
                 // Ist die Zeitdifferenz plausibel? (Oft fehlende Verbindungen in Simulated Times)
                 if dt > 2.0 && dt < 60.0 {
-                    bonus += 100.0 - dt;
+                    penalty += 100.0 + dt;
                 } else {
                     // Unmögliche Zeit (Teleportation) -> TÖDLICHE Strafe
                     penalty += 5000.0; 

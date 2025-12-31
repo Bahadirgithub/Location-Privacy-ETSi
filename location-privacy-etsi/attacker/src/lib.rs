@@ -151,7 +151,7 @@ fn main(generations_trips: usize, generations_wallets: usize, p_mutation_small:f
         let mut next_generation: Vec<Individual>;
 
         //Evolution
-        population = evolution(parents, mutation_rate, 0.1, 0.02, 0.2, 0.2, true); //Hohe Mutationsraten, da kein Crossover stattfindet
+        population = evolution(parents, mutation_rate, 0.1, 0.02, 0.2, 0.3, true); //Hohe Mutationsraten, da kein Crossover stattfindet
         //Fitness berechnen
         next_generation = calculate_trip_fitness(population, &transactions, &time_map);
 
