@@ -367,4 +367,5 @@ if __name__ == "__main__":
     main()
 
     report(args.detailed)
-    plot()
+    if args.detailed:
+        plot()

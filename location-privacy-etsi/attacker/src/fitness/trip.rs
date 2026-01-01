@@ -1,13 +1,18 @@
 use crate::types::*;
 use rayon::prelude::*;
 use std::collections::{HashSet, HashMap};
+use std::f64::consts::E;
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &HashMap<(u32, u32), SimulatedTime>) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
     let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
+    let transaction_size = transactions.len();
     let mut time_dif: f64 = 0.0;
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
+
+    //Arten der Strafen
+    const DEATH_PENALTY: f64 = 100_000.0;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
@@ -17,9 +22,11 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     penalty += (num_active_trips as f64) * 200.0;
 
     let mut location_stats: HashMap<u32, (i32, i32)> = HashMap::new();
-
     for trip in trips.iter_mut(){
         if trip.is_empty() { continue; }
+
+        //Sortieren der Transaktionen nach Zeitpunkt
+        trip.sort_unstable_by_key(|t| t.time); 
 
         // Start-/Enddetektor erfassen
         let start_det = trip.first().unwrap().detector;
@@ -31,23 +38,26 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
         let entry_end = location_stats.entry(end_det).or_insert((0, 0));
         entry_end.1 += 1; // +1 End Count
 
-        //Sortieren der Transaktionen nach Zeitpunkt
-        trip.sort_unstable_by_key(|t| t.time); 
-
         let trip_len = trip.len();
         //Bewertung der Trip-Länge
         if trip_len < 2 {
-            penalty += 10000.0; //Auf keinen Fall einzelne Trips!
+            penalty += DEATH_PENALTY; //Auf keinen Fall einzelne Trips!
             continue;
         }
+        // In ingolstadt trip size 3-43
         else if trip_len < 4 {
-            penalty += 2000.0;
+            penalty += 200.0;
         }
-        else if trip_len > 20{
+        else if trip_len > (transaction_size / 10){ //Trip ist so groß wie 10% der Transaktionen -> Strafe
             penalty += 2000.0;
         }
         else {
-            bonus += (trip_len as f64).powi(2) * 10.0;
+            let l = 10_000.0;  // Maximale Belohnung
+            let k = 0.2;     // Steigung der Funktion
+            let x0 = 20.0;   // Wendepunkt bei Trip-Länge
+                
+            // Berechnung des Bonus mit der sigmoiden Funktion
+            bonus += l / (1.0 + E.powf(-k * (trip_len as f64 - x0)));
         }
 
         //Detektor darf nie doppel vorkommen
@@ -56,7 +66,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             let detector_id = trans.detector;
             if !detectors_seen.insert(detector_id){
                 //False bedeutet Id wurde bereits hinzugefügt
-                penalty += 10000.0;
+                penalty += DEATH_PENALTY;
                 break;
             }
         }
@@ -73,7 +83,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             let dt: f64 = next.time as f64 - current.time as f64;
 
             if dt <= 0.0 { //Zeitreisen verboten!
-                penalty += 10000.0; // Tödliche Strafe
+                penalty += DEATH_PENALTY; // Tödliche Strafe
                 continue;
             }
 
@@ -81,11 +91,15 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
             if sim_data.from_detector == 9999 {
                 // Ist die Zeitdifferenz plausibel? (Oft fehlende Verbindungen in Simulated Times)
-                if dt > 2.0 && dt < 60.0 {
+                if dt > 1.0 && dt < 60.0 {
                     penalty += 100.0 + dt;
-                } else {
+                } 
+                else if dt < 120.0 {
+                    penalty += 1000.0;
+                }
+                else {
                     // Unmögliche Zeit (Teleportation) -> TÖDLICHE Strafe
-                    penalty += 5000.0; 
+                    penalty += DEATH_PENALTY; 
                 }
             }
             else{

@@ -468,7 +468,7 @@ def main():
 
     create_list()
 
-    print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
+    print("Number of Transactions: ", len(transactions_attacker_knowlege), ", Number of Trips: ", len(results), ", Number of Wallets: ", len(walletCosts))
 
 
     # Globales Dictionary für das Mapping
@@ -521,8 +521,8 @@ def main():
         existing_routes.add((u, v))
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 6000 #6000
-    GENERATIONS_WALLETS = 12000 #12000
+    GENERATIONS_TRIPS = 20000 #6000
+    GENERATIONS_WALLETS = 50000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]

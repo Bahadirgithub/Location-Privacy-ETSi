@@ -66,6 +66,12 @@ fn generate_trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
+    //Trips nach Zeit sortieren
+    for trip in trips.iter_mut(){
+        if trip.is_empty() { continue; }
+        trip.sort_unstable_by_key(|t| t.time); 
+    }
+
     for (_, trip_trans) in trips.iter().enumerate() {
         if trip_trans.is_empty() { continue; }
         let mut trip_cost: f32 = 0.0;
