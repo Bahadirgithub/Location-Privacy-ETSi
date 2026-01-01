@@ -459,13 +459,7 @@ def main():
     #generate Hashmap Lookup
     generate_Hashmap()
     #find trips
-    simAn()   
-    #write trip results   
-    trips =  ET.SubElement(output_root, "trips")
-    for trip in results:
-        strList = list(map(str, trip.used))
-        ET.SubElement(trips, "trip", ids = " ".join(strList))
-
+    simAn()
     create_list()
 
     print("Number of Transactions: ", len(transactions_attacker_knowlege), ", Number of Trips: ", len(results), ", Number of Wallets: ", len(walletCosts))
@@ -521,8 +515,8 @@ def main():
         existing_routes.add((u, v))
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 20000 #6000
-    GENERATIONS_WALLETS = 50000 #12000
+    GENERATIONS_TRIPS = 10000 #6000
+    GENERATIONS_WALLETS = 15000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
@@ -547,6 +541,23 @@ def main():
                 # Die echte ID aus dem XML holen
                 original_trip = transactions_attacker_knowlege[trans_idx].attrib['id']
                 wallet_assignments[wallet_id].append(original_trip)
+
+    #write trip results
+    genome = best_trip.genome
+    trips_map = collections.defaultdict(list)
+    for i, assigned_trip_id in enumerate(genome):
+        # Das XML-Objekt der entsprechenden Transaktion holen
+        original_trans_xml = transactions_attacker_knowlege[i]
+        original_id = original_trans_xml.attrib['id']
+
+        trips_map[assigned_trip_id].append(original_id)
+
+    trips_xml_element = ET.SubElement(output_root, "trips")
+
+    for trip_id, trans_ids_list in trips_map.items():
+        ids_string = " ".join(trans_ids_list)
+        #<trip ids="..."> erstellen
+        ET.SubElement(trips_xml_element, "trip", ids=ids_string)
 
 
     #write wallet results
