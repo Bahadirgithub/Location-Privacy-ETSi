@@ -11,8 +11,19 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    //Arten der Strafen
-    const DEATH_PENALTY: f64 = 100_000.0;
+    //Gefundene Parameter (N-Times=25)
+    const SHORT_TRIP_PENALTY: f64 = 16589.78;
+    const TIMETRAVEL_PENALTY: f64 = 52437.39;
+    const TELEPORTATION_PENALTY: f64 = 42809.67;
+    const MAX_TRIP_SIZE_BONUS: f64 = 10_000.0;
+    const TRIP_SIZE_STEIGUNG: f64 = 59.35;
+    const TRIP_SIZE_WENDEPUNKT: f64 = 10.1;
+    const TRIP_LEN_PENALTY: f64 = 275.07;
+    const SIM_DATA_PENALTY: f64 = 383.5;
+
+    const PERFECT_TIME_BONUS: f64 = 291.42;
+    const START_END_BONUS: f64 = 1075.3;
+    const HUB_BONUS: f64 = 385.9;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
@@ -26,7 +37,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
         if trip.is_empty() { continue; }
 
         //Sortieren der Transaktionen nach Zeitpunkt
-        trip.sort_unstable_by_key(|t| t.time); 
+        trip.sort_unstable_by_key(|t| t.time);
 
         // Start-/Enddetektor erfassen
         let start_det = trip.first().unwrap().detector;
@@ -41,21 +52,21 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
         let trip_len = trip.len();
         //Bewertung der Trip-Länge
         if trip_len < 2 {
-            penalty += DEATH_PENALTY; //Auf keinen Fall einzelne Trips!
+            penalty += SHORT_TRIP_PENALTY; //Auf keinen Fall einzelne Trips!
             continue;
         }
         // In ingolstadt trip size 3-43
         else if trip_len < 4 {
-            penalty += 200.0;
+            penalty += TRIP_LEN_PENALTY;
         }
         else if trip_len > (transaction_size / 10){ //Trip ist so groß wie 10% der Transaktionen -> Strafe
-            penalty += 2000.0;
+            penalty += TRIP_LEN_PENALTY * 10.0;
         }
         else {
-            let l = 10_000.0;  // Maximale Belohnung
-            let k = 0.2;     // Steigung der Funktion
-            let x0 = 20.0;   // Wendepunkt bei Trip-Länge
-                
+            let l = MAX_TRIP_SIZE_BONUS;  // Maximale Belohnung
+            let k = TRIP_SIZE_STEIGUNG;     // Steigung der Funktion
+            let x0 = TRIP_SIZE_WENDEPUNKT;   // Wendepunkt bei Trip-Länge
+
             // Berechnung des Bonus mit der sigmoiden Funktion
             bonus += l / (1.0 + E.powf(-k * (trip_len as f64 - x0)));
         }
@@ -66,7 +77,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             let detector_id = trans.detector;
             if !detectors_seen.insert(detector_id){
                 //False bedeutet Id wurde bereits hinzugefügt
-                penalty += DEATH_PENALTY;
+                penalty += 10_000.0;
                 break;
             }
         }
@@ -83,7 +94,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             let dt: f64 = next.time as f64 - current.time as f64;
 
             if dt <= 0.0 { //Zeitreisen verboten!
-                penalty += DEATH_PENALTY; // Tödliche Strafe
+                penalty += TIMETRAVEL_PENALTY; // Tödliche Strafe
                 continue;
             }
 
@@ -92,14 +103,14 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             if sim_data.from_detector == 9999 {
                 // Ist die Zeitdifferenz plausibel? (Oft fehlende Verbindungen in Simulated Times)
                 if dt > 1.0 && dt < 60.0 {
-                    penalty += 100.0 + dt;
-                } 
+                    penalty += SIM_DATA_PENALTY + dt;
+                }
                 else if dt < 120.0 {
-                    penalty += 1000.0;
+                    penalty += SIM_DATA_PENALTY * 10.0;
                 }
                 else {
                     // Unmögliche Zeit (Teleportation) -> TÖDLICHE Strafe
-                    penalty += DEATH_PENALTY; 
+                    penalty += TELEPORTATION_PENALTY;
                 }
             }
             else{
@@ -109,15 +120,15 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
                 if dt >= min_t && dt <= max_t {
                     // Perfekt
-                    bonus += 300.0;
-                    
+                    bonus += PERFECT_TIME_BONUS;
+
                     // Zusatz-Bonus für Nähe zum Durchschnitt (Genauigkeit)
                     let diff_avg = (dt - avg_t).abs();
-                    bonus += 50.0 - diff_avg;
-                    
+                    bonus += PERFECT_TIME_BONUS - diff_avg;
+
                     trip_valid_segments += 1;
                 } else {
-                    // Quadratische Strafe 
+                    // Quadratische Strafe
                     let violation = if dt < min_t { min_t - dt } else { dt - max_t };
                     time_dif += violation.powi(2) * 0.1;
                     penalty += 50.0; // Grundstrafe für "Out of Bounds"
@@ -133,13 +144,13 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     for (_, (starts, ends)) in location_stats {
         if starts > 0 && ends > 0 {
             //Ort ist sowohl Start als auch Ende
-            bonus += 1000.0;
+            bonus += START_END_BONUS;
         }
 
         let total_usage = starts + ends;
         if total_usage >= 4 {
             //Ort wird öfters benutzt (HUB: Zuhause oder Arbeit)
-            bonus += 500.0 * (total_usage as f64);
+            bonus += HUB_BONUS * (total_usage as f64);
         }
     }
 
