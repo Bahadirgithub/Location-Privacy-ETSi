@@ -11,19 +11,19 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    //Gefundene Parameter (N-Times=25)
-    const SHORT_TRIP_PENALTY: f64 = 16589.78;
-    const TIMETRAVEL_PENALTY: f64 = 52437.39;
-    const TELEPORTATION_PENALTY: f64 = 42809.67;
-    const MAX_TRIP_SIZE_BONUS: f64 = 10_000.0;
-    const TRIP_SIZE_STEIGUNG: f64 = 59.35;
-    const TRIP_SIZE_WENDEPUNKT: f64 = 10.1;
-    const TRIP_LEN_PENALTY: f64 = 275.07;
-    const SIM_DATA_PENALTY: f64 = 383.5;
+    //Gefundene Parameter (N-Times=29)
+    const SHORT_TRIP_PENALTY: f64 = 21750.74;
+    const TIMETRAVEL_PENALTY: f64 = 49527.94;
+    const TELEPORTATION_PENALTY: f64 = 59325.51;
+    const MAX_TRIP_SIZE_BONUS: f64 = 38855.0;
+    const TRIP_SIZE_STEIGUNG: f64 = 35.12;
+    const TRIP_SIZE_WENDEPUNKT: f64 = 66.63;
+    const TRIP_LEN_PENALTY: f64 = 273.92;
+    const SIM_DATA_PENALTY: f64 = 322.38;
 
-    const PERFECT_TIME_BONUS: f64 = 291.42;
-    const START_END_BONUS: f64 = 1075.3;
-    const HUB_BONUS: f64 = 385.9;
+    const PERFECT_TIME_BONUS: f64 = 457.63;
+    const START_END_BONUS: f64 = 572.59;
+    const HUB_BONUS: f64 = 521.35;
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen

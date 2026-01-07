@@ -515,7 +515,7 @@ def main():
         existing_routes.add((u, v))
 
     # Genetische Funktion:
-    GENERATIONS_TRIPS = 12000 #6000
+    GENERATIONS_TRIPS = 8000 #6000
     GENERATIONS_WALLETS = 20000 #12000
     POPULATION_SIZE = 500
 
