@@ -1,38 +1,44 @@
 use crate::types::*;
 use rayon::prelude::*;
 use std::collections::{HashSet, HashMap};
-use std::f64::consts::E;
+
+#[derive(Clone, Copy)]
+struct TripPoint {
+    id: usize,
+    loc: i32,     // Location ID (Detektor)
+    time: i32,
+    used: bool,
+}
 
 pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated_times: &HashMap<(u32, u32), SimulatedTime>) -> f64{
     let max_trip_id = *individual.iter().max().unwrap_or(&0) as usize;
     let mut trips: Vec<Vec<&Transaction>> = vec![Vec::new(); max_trip_id + 1]; //Leere Trip Liste erstellen
-    let transaction_size = transactions.len();
     let mut time_dif: f64 = 0.0;
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    //Gefundene Parameter (N-Times=29)
-    const SHORT_TRIP_PENALTY: f64 = 21750.74;
-    const TIMETRAVEL_PENALTY: f64 = 49527.94;
-    const TELEPORTATION_PENALTY: f64 = 59325.51;
-    const MAX_TRIP_SIZE_BONUS: f64 = 38855.0;
-    const TRIP_SIZE_STEIGUNG: f64 = 35.12;
-    const TRIP_SIZE_WENDEPUNKT: f64 = 66.63;
-    const TRIP_LEN_PENALTY: f64 = 273.92;
-    const SIM_DATA_PENALTY: f64 = 322.38;
+    //Gefundene Parameter
+    const TRIP_LEN_EXP: f64 = 0.63;
+    const TRIP_LEN_MULT: f64 = 58.25;
+    const SHORT_TRIP_PENALTY: f64 = 10256.21;
+    const TIMETRAVEL_PENALTY: f64 = 107127.79;
+    const TELEPORTATION_PENALTY: f64 = 81475.05;
+    const ACTIVE_TRIPS_PENALTY: f64 = 310.44; //WIP
+    const SIM_DATA_PENALTY: f64 = 182.65;
 
-    const PERFECT_TIME_BONUS: f64 = 457.63;
-    const START_END_BONUS: f64 = 572.59;
-    const HUB_BONUS: f64 = 521.35;
+    const PERFECT_TIME_BONUS: f64 = 863.82;
+    const DETECTOR_MATCH_BONUS: f64 = 3890.18; //WIP
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
     }
 
     let num_active_trips = trips.iter().filter(|t| !t.is_empty()).count();
-    penalty += (num_active_trips as f64) * 200.0;
+    penalty += (num_active_trips as f64) * ACTIVE_TRIPS_PENALTY;
 
-    let mut location_stats: HashMap<u32, (i32, i32)> = HashMap::new();
+    //Start und Endpunkte
+    let mut start_points: Vec<TripPoint> = Vec::with_capacity(num_active_trips);
+    let mut end_points: Vec<TripPoint> = Vec::with_capacity(num_active_trips);
     for trip in trips.iter_mut(){
         if trip.is_empty() { continue; }
 
@@ -40,14 +46,24 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
         trip.sort_unstable_by_key(|t| t.time);
 
         // Start-/Enddetektor erfassen
-        let start_det = trip.first().unwrap().detector;
-        let end_det = trip.last().unwrap().detector;
+        let start_trans = trip.first().unwrap();
+        let end_trans = trip.last().unwrap();
 
-        let entry_start = location_stats.entry(start_det).or_insert((0, 0));
-        entry_start.0 += 1; // +1 Start Count
 
-        let entry_end = location_stats.entry(end_det).or_insert((0, 0));
-        entry_end.1 += 1; // +1 End Count
+        //Start-/Endwerte befüllen
+        start_points.push(TripPoint {
+            id: start_trans.id as usize,
+            loc: start_trans.detector as i32,
+            time: start_trans.time as i32,
+            used: false
+        });
+
+        end_points.push(TripPoint {
+            id: end_trans.id as usize,
+            loc: end_trans.detector as i32,
+            time: end_trans.time as i32,
+            used: false // bei Endpunkten irrelevant
+        });
 
         let trip_len = trip.len();
         //Bewertung der Trip-Länge
@@ -55,20 +71,11 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             penalty += SHORT_TRIP_PENALTY; //Auf keinen Fall einzelne Trips!
             continue;
         }
-        // In ingolstadt trip size 3-43
-        else if trip_len < 4 {
-            penalty += TRIP_LEN_PENALTY;
-        }
-        else if trip_len > (transaction_size / 10){ //Trip ist so groß wie 10% der Transaktionen -> Strafe
-            penalty += TRIP_LEN_PENALTY * 10.0;
-        }
         else {
-            let l = MAX_TRIP_SIZE_BONUS;  // Maximale Belohnung
-            let k = TRIP_SIZE_STEIGUNG;     // Steigung der Funktion
-            let x0 = TRIP_SIZE_WENDEPUNKT;   // Wendepunkt bei Trip-Länge
+            let len_exp = TRIP_LEN_EXP;
+            let len_mult = TRIP_LEN_MULT;
 
-            // Berechnung des Bonus mit der sigmoiden Funktion
-            bonus += l / (1.0 + E.powf(-k * (trip_len as f64 - x0)));
+            bonus += (trip_len as f64).powf(len_exp) * len_mult;
         }
 
         //Detektor darf nie doppel vorkommen
@@ -102,11 +109,8 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
             if sim_data.from_detector == 9999 {
                 // Ist die Zeitdifferenz plausibel? (Oft fehlende Verbindungen in Simulated Times)
-                if dt > 1.0 && dt < 60.0 {
-                    penalty += SIM_DATA_PENALTY + dt;
-                }
-                else if dt < 120.0 {
-                    penalty += SIM_DATA_PENALTY * 10.0;
+                if dt > 1.0 && dt < 45.0 {
+                    penalty += SIM_DATA_PENALTY + (dt * 5.0);
                 }
                 else {
                     // Unmögliche Zeit (Teleportation) -> TÖDLICHE Strafe
@@ -118,13 +122,24 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
                 let max_t = sim_data.max as f64;
                 let avg_t = sim_data.avg as f64;
 
-                if dt >= min_t && dt <= max_t {
+                let range_width = max_t - min_t;
+                let min_sigma = (avg_t * 0.1).max(5.0); //Min. 10% Abweichung oder 5 Sekunden
+
+                //Standardabweichung berechnen
+                let sigma = (range_width / 4.0).max(min_sigma);
+
+                //Weiche Grenzen basierend auf Sigma
+                let soft_min = avg_t - (3.0 * sigma);
+                let soft_max = avg_t + (3.0 * sigma);
+
+                if dt >= soft_min && dt <= soft_max {
                     // Perfekt
                     bonus += PERFECT_TIME_BONUS;
 
                     // Zusatz-Bonus für Nähe zum Durchschnitt (Genauigkeit)
                     let diff_avg = (dt - avg_t).abs();
-                    bonus += PERFECT_TIME_BONUS - diff_avg;
+
+                    bonus += PERFECT_TIME_BONUS - (diff_avg / sigma).powi(2);
 
                     trip_valid_segments += 1;
                 } else {
@@ -140,20 +155,33 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
             bonus += (trip_len as f64) * 100.0;
         }
     }
-    //Globale Analyse
-    for (_, (starts, ends)) in location_stats {
-        if starts > 0 && ends > 0 {
-            //Ort ist sowohl Start als auch Ende
-            bonus += START_END_BONUS;
-        }
+    //Globale Analyse Start & Ende der Trips
+    for end_p in end_points.iter() {
+        //Passenden Startdetector finden
+        let mut best_match_time = 99999;
+        let mut best_match_id = -1;
+        for (i, start_p) in start_points.iter().enumerate() {
+            if start_p.used { continue; }
 
-        let total_usage = starts + ends;
-        if total_usage >= 4 {
-            //Ort wird öfters benutzt (HUB: Zuhause oder Arbeit)
-            bonus += HUB_BONUS * (total_usage as f64);
+            if end_p.loc == start_p.loc {
+                //Gleicher Ort
+                if start_p.time > end_p.time {
+                    //Passende Zeit: Start ist später als vorheriges Ende
+                    let time_diff = start_p.time - end_p.time;
+                    if time_diff < best_match_time{
+                        best_match_time = time_diff;
+                        best_match_id = i as i32;
+                    }
+                }
+            }
+        }
+        if best_match_id != -1 {
+            //Bonus belohnen
+            bonus += DETECTOR_MATCH_BONUS;
+            //Detektor Match entfernen
+            start_points[best_match_id as usize].used = true;
         }
     }
-
 
     let score = (100.0 + bonus) / (1.0 + time_dif + penalty);
 
