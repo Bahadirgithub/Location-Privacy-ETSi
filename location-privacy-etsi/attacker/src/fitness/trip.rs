@@ -23,11 +23,11 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     const SHORT_TRIP_PENALTY: f64 = 10256.21;
     const TIMETRAVEL_PENALTY: f64 = 107127.79;
     const TELEPORTATION_PENALTY: f64 = 81475.05;
-    const ACTIVE_TRIPS_PENALTY: f64 = 310.44; //WIP
+    const ACTIVE_TRIPS_PENALTY: f64 = 330.0; //WIP
     const SIM_DATA_PENALTY: f64 = 182.65;
 
     const PERFECT_TIME_BONUS: f64 = 863.82;
-    const DETECTOR_MATCH_BONUS: f64 = 3890.18; //WIP
+    const DETECTOR_MATCH_BONUS: f64 = 2000.0; //WIP
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
