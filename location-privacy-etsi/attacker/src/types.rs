@@ -52,4 +52,6 @@
         pub start_loc_id: usize,
         #[pyo3(get, set)]
         pub end_loc_id: usize,
+        #[pyo3(get, set)]
+        pub transactions: Vec<u32>,
     }

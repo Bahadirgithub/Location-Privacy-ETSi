@@ -76,8 +76,10 @@ fn generate_trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>
         if trip_trans.is_empty() { continue; }
         let mut trip_cost: f32 = 0.0;
         let trip_len = trip_trans.len();
+        let mut transaction_list: Vec<u32> = Vec::new();
         for trans in trip_trans{
             trip_cost += trans.cost;
+            transaction_list.push(trans.id)
         }
         let continous_id = result.len(); //Trip Id Lücken schließen
         let obj = Trip {
@@ -87,6 +89,7 @@ fn generate_trips(individual: &[u32], transactions: &[Transaction]) -> Vec<Trip>
             end_time: trip_trans[trip_len-1].time,
             start_loc_id: trip_trans[0].detector as usize,
             end_loc_id: trip_trans[trip_len-1].detector as usize,
+            transactions: transaction_list,
         };
         result.push(obj);
     }

@@ -1,5 +1,6 @@
 use crate::types::*;
 use rayon::prelude::*;
+use std::collections::HashSet;
 
 pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> f64 {
     let mut wallets: Vec<Vec<&Trip>> = vec![Vec::new(); num_wallets];
@@ -49,12 +50,34 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
             let next = wallet_trips[i+1];
 
             if current.end_time > next.start_time{
-                penalty += TIME_TELEP_PENALTY; //penalty prüfen
+                let overlap = current.end_time - next.start_time;
+                penalty += TIME_TELEP_PENALTY * overlap as f64; //penalty prüfen
             }
 
             //check for simmilarity in start and end location
             if current.end_loc_id != next.start_loc_id {
                 penalty += LOC_TELEP_PENALTY;
+            }
+        }
+        //Änhlichkeit mit Jaccard Index bewerten
+        for i in 0..trip_count{
+            //Trip Paare belohnen
+            let mut best_jaccard_score = 0.0;
+            for j in (i+1)..trip_count {
+                let jaccard_score = jaccard_index(
+                    &wallet_trips[i].transactions,
+                    &wallet_trips[j].transactions
+                );
+
+                if jaccard_score > best_jaccard_score { best_jaccard_score = jaccard_score};
+
+                if jaccard_score > 0.7{
+                    break; //Falls Score hoch genug ist
+                }
+            }
+
+            if best_jaccard_score > 0.7{
+                bonus += best_jaccard_score * 10.0;
             }
         }
     }
@@ -65,6 +88,23 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
     let score = (1.0 + bonus) / (1.0 + bad);
 
     score
+}
+
+fn jaccard_index(a: &[u32], b: &[u32]) -> f64{
+    //O(N+M) Komplexität
+    //https://www.geeksforgeeks.org/dsa/find-the-jaccard-index-and-jaccard-distance-between-the-two-given-sets/
+    //https://www.geeksforgeeks.org/dsa/intersection-of-two-arrays/
+    let mut sa: HashSet<u32> = a.iter().copied().collect();
+    let mut intersection = 0;
+
+    for &item in b.iter() {
+        if sa.remove(&item) {
+            intersection += 1;
+        }
+    }
+
+    let union = a.len() + b.len() - intersection;
+    if union == 0 { 0.0 } else { intersection as f64 / union as f64 }
 }
 
 pub fn calculate_wallet_fitness(population: Vec<Individual>, num_wallets: usize, trips: &[Trip], sorted_wallets: &[u32]) -> Vec<Individual>{
