@@ -1,5 +1,6 @@
 import argparse
 import bisect
+import collections
 import os
 import sys
 import time
@@ -458,66 +459,105 @@ def main():
     #generate Hashmap Lookup
     generate_Hashmap()
     #find trips
-    simAn()   
-    #write trip results   
-    trips =  ET.SubElement(output_root, "trips")
-    for trip in results:
-        strList = list(map(str, trip.used))
-        ET.SubElement(trips, "trip", ids = " ".join(strList))
-
+    simAn()
     create_list()
 
-    print("Number of Trips: " + str(len(results)) + ", Number of Wallets: " + str(len(walletCosts)))
+    print("Number of Transactions: ", len(transactions_attacker_knowlege), ", Number of Trips: ", len(results), ", Number of Wallets: ", len(walletCosts))
 
-    all_detectors = sorted(list(DG.nodes()))
-    det_to_id = {name: i for i, name in enumerate(all_detectors)}
-    num_locations = len(all_detectors)
 
-    trans_id_to_det = {}
+    # Globales Dictionary für das Mapping
+    detector_mapping = {}
+
+    def get_detector_id(detector_name):
+        if detector_name not in detector_mapping:
+            # Die neue ID ist einfach die aktuelle Länge des Dictionaries
+            detector_mapping[detector_name] = len(detector_mapping)
+        return detector_mapping[detector_name]
+
+    rust_inital_pop = [0] * len(transactions_attacker_knowlege)
+
+    # Build a dictionary for fast lookup
+    transaction_dict = {int(t.attrib['id']): idx for idx, t in enumerate(transactions_attacker_knowlege)}
+
+    # Loop through trips and update rust_inital_pop
+    for trip_id, trip in enumerate(results):
+        for trans_id in trip.used:
+            if trans_id in transaction_dict:
+                idx = transaction_dict[trans_id]
+                rust_inital_pop[idx] = trip_id
+
+    rust_transactions = []
     for trans in transactions_attacker_knowlege:
-        t_id = int(trans.attrib['id'])
-        t_det = trans.attrib['detector']
-        trans_id_to_det[t_id] = t_det
-
-    num_trips = len(results)
-
-    # Generate Rust Trip Objects
-    rust_trips = []
-    for i in range(num_trips):
-        py_trip = results[i]
-
-        start_trans_id = py_trip.used[0]
-        end_trans_id = py_trip.used[-1]
-
-        start_det_name = trans_id_to_det[start_trans_id]
-        end_det_name = trans_id_to_det[end_trans_id]
-
-        rt = genetic.Trip(
-            id=i,
-            cost=int(py_trip.cost),
-            start_time=int(py_trip.timeStart),
-            end_time=int(py_trip.timeEnd),
-            start_loc_id=det_to_id.get(start_det_name, 0),
-            end_loc_id=det_to_id.get(end_det_name, 0),
+        t_obj = genetic.Transaction(
+            id= int(trans.attrib['id']),
+            detector= get_detector_id(str([trans.attrib['detector']])),
+            time= int(trans.attrib['time']),
+            cost= int(trans.attrib['cost']),
         )
-        rust_trips.append(rt)
+        rust_transactions.append(t_obj)
+
+    rust_sim_times = []
+    tree_detectors = ET.parse(simulated_times_file)
+    root_detectors = tree_detectors.getroot()
+    existing_routes = set()
+
+    for detector in root_detectors.iter('route'):
+        u = get_detector_id(str([detector.attrib['fromDetector']]))
+        v = get_detector_id(str([detector.attrib['toDetector']]))
+        t_obj = genetic.SimulatedTime(
+            from_detector= u,
+            to_detector= v,
+            avg= float(detector.attrib['avg']),
+            min= float(detector.attrib['minTime']),
+            max= float(detector.attrib['maxTime']),
+        )
+        rust_sim_times.append(t_obj)
+        existing_routes.add((u, v))
 
     # Genetische Funktion:
-    GENERATIONS = 30000
+    GENERATIONS_TRIPS = 12000 #6000
+    GENERATIONS_WALLETS = 20000 #12000
     POPULATION_SIZE = 500
 
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    population = genetic.main(GENERATIONS, 0.1, 0.05, num_trips, len(walletCosts), POPULATION_SIZE, sorted(walletCosts), rust_trips)
+    (population_wallets, population_trips) = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
-    best_individual = max(population, key=lambda ind: ind.score)
+    print("Reconstructing results...")
+
+    best_trip = max(population_trips, key=lambda ind: ind.score)
+    best_wallet = max(population_wallets, key=lambda ind: ind.score)
+    best_individual = best_wallet.score
 
     wallet_assignments = {i: [] for i in range(len(walletCosts))}
 
-    for trip_index, wallet_id in enumerate(best_individual.genome):
-        if wallet_id < len(walletCosts):
-            original_trip = results[trip_index]
-            wallet_assignments[wallet_id].append(original_trip)
+    # Wir gehen jede Transaktion durch (Reihenfolge wie in transactions_attacker_knowlege)
+    for trans_idx, assigned_trip_id in enumerate(best_trip.genome):
+        # Sicherheitscheck: Hat dieser Trip (ggf. neu durch Split) ein Wallet?
+        if assigned_trip_id < len(best_wallet.genome):
+            wallet_id = best_wallet.genome[assigned_trip_id]
+
+            if wallet_id < len(walletCosts):
+                # Die echte ID aus dem XML holen
+                original_trip = transactions_attacker_knowlege[trans_idx].attrib['id']
+                wallet_assignments[wallet_id].append(original_trip)
+
+    #write trip results
+    genome = best_trip.genome
+    trips_map = collections.defaultdict(list)
+    for i, assigned_trip_id in enumerate(genome):
+        # Das XML-Objekt der entsprechenden Transaktion holen
+        original_trans_xml = transactions_attacker_knowlege[i]
+        original_id = original_trans_xml.attrib['id']
+
+        trips_map[assigned_trip_id].append(original_id)
+
+    trips_xml_element = ET.SubElement(output_root, "trips")
+
+    for trip_id, trans_ids_list in trips_map.items():
+        ids_string = " ".join(trans_ids_list)
+        #<trip ids="..."> erstellen
+        ET.SubElement(trips_xml_element, "trip", ids=ids_string)
 
 
     #write wallet results
@@ -525,15 +565,12 @@ def main():
     for wallet_id in range(len(walletCosts)):
         assigned_trips = wallet_assignments[wallet_id]
 
-        all_transaction_ids = []
-        for trip in assigned_trips:
-            all_transaction_ids.extend(trip.used)
+        ids_string = " ".join(map(str, assigned_trips))
+        ET.SubElement(wallets_xml, "wallet", ids=ids_string)
 
-        strList = list(map(str, all_transaction_ids))
-        ET.SubElement(wallets_xml, "wallet", ids=" ".join(strList))
     tree = ET.ElementTree(output_root)
     tree.write('attacks/' + output_file_name)
-   
+
     print('Finished')
 
 

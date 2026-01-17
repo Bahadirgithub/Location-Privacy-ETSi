@@ -13,3 +13,4 @@ crate-type = ["cdylib"]
 pyo3 = "*" #Python Konnektor
 rand = "0.8" #Random Bibliothek
 indicatif = "*" #Progress Bar
+rayon = "*" #Multiprocessing

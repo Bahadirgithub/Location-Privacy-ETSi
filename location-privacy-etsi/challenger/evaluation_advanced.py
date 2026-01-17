@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import numpy as np
+from collections import Counter
 import xml.etree.ElementTree as ET
 from tqdm import tqdm
 from datetime import datetime
@@ -12,6 +13,14 @@ import matplotlib.pyplot as plt
 f1_scores_trip = []
 f1_scores_wallet = []
 
+trip_sizes_pred = []
+trip_sizes_true = []
+
+wallet_sizes_pred = []
+wallet_sizes_true = []
+
+trip_data_for_bubble = []
+wallet_data_for_bubble = []
 
 def challengerTrips():
     """
@@ -28,10 +37,12 @@ def challengerTrips():
 
     # Compare the attacker trips with the challenger trips
     for trip in tqdm(root_attacker[0], desc="Challenger Trips"):
-        str_list = trip.attrib['ids'].split(' ')
+        str_list = trip.attrib['ids'].split()
         usedTrips = set(map(int, str_list))
 
-        best_f1_for_this_trip = 0.0
+        best_f1_score = 0.0
+        best_true_len = 0
+        current_pred_len = len(usedTrips)
 
         # Find the best matching trip in ground truth
         for true_trip in tripList:
@@ -41,10 +52,17 @@ def challengerTrips():
             if intersection > 0:
                 current_f1 = (2.0 * intersection) / (len(usedTrips) + len(true_trip))
 
-                if current_f1 > best_f1_for_this_trip:
-                    best_f1_for_this_trip = current_f1
+                if current_f1 > best_f1_score:
+                    best_f1_score = current_f1
+                    best_true_len = len(true_trip)
 
-        f1_scores_trip.append(best_f1_for_this_trip)
+        f1_scores_trip.append(best_f1_score)
+
+        if best_f1_score > 0:
+            trip_data_for_bubble.append((best_true_len, best_f1_score))
+
+        trip_sizes_pred.append(current_pred_len)
+        trip_sizes_true.append(best_true_len)
 
     # Return average best f1 scores
     if not f1_scores_trip: return 0.0
@@ -64,10 +82,12 @@ def challengerWallets():
 
     # Compare the attacker wallets with the challenger wallets
     for wallet in tqdm(root_attacker[1], desc="Challenger Wallets"):
-        str_list = wallet.attrib['ids'].split(' ')
+        str_list = wallet.attrib['ids'].split()
         usedWallets = set(map(int, str_list))
 
-        best_f1_for_this_wallet = 0.0
+        best_f1_score = 0.0
+        best_true_len = 0
+        current_pred_len = len(usedWallets)
 
         for true_wallet in walletList:
             intersection = len(usedWallets & true_wallet)
@@ -76,10 +96,17 @@ def challengerWallets():
                 # F1 formula
                 current_f1 = (2.0 * intersection) / (len(usedWallets) + len(true_wallet))
 
-                if current_f1 > best_f1_for_this_wallet:
-                    best_f1_for_this_wallet = current_f1
+                if current_f1 > best_f1_score:
+                    best_f1_score = current_f1
+                    best_true_len = len(true_wallet)
 
-        f1_scores_wallet.append(best_f1_for_this_wallet)
+        f1_scores_wallet.append(best_f1_score)
+
+        if best_f1_score > 0:
+            wallet_data_for_bubble.append((best_true_len, best_f1_score))
+
+        wallet_sizes_pred.append(current_pred_len)
+        wallet_sizes_true.append(current_pred_len)
 
     # Return average best f1 scores
     if not f1_scores_wallet: return 0.0
@@ -153,6 +180,18 @@ def detailed_report(f):
 
     # --- Ground Truth Listen vorbereiten ---
     challenger_trips_xml = root_challenger_knowledge[2]
+    truth_lengths = [len(trip) for trip in challenger_trips_xml]
+    avg_truth_len = sum(truth_lengths) / len(truth_lengths) if truth_lengths else 0.0
+
+    attacker_trips_xml = root_attacker[0]
+    pred_lengths = [len(trip.attrib['ids'].split()) for trip in attacker_trips_xml]
+    avg_pred_len = sum(pred_lengths) / len(pred_lengths) if pred_lengths else 0.0
+
+    f.write('\n-------------------- General Trip Statistics --------------------\n')
+    f.write(f'Average Trip Length (Ground Truth): {avg_truth_len:.2f} transactions\n')
+    f.write(f'Average Trip Length (Predicted):    {avg_pred_len:.2f} transactions\n')
+    f.write(f'Difference (Pred - Truth):          {avg_pred_len - avg_truth_len:.2f}\n')
+
     truth_trip_list = []
     for t in challenger_trips_xml:
         truth_trip_list.append(set(int(x.attrib['id']) for x in t))
@@ -310,6 +349,64 @@ def plot():
     plt.show()
 
 
+def plot_sizes():
+    plt.figure(figsize=(10, 6))
+    plt.scatter(trip_sizes_true, trip_sizes_pred,
+                alpha=0.5, c='blue', label='Trips', edgecolors='k')
+    max_val = max(max(trip_sizes_pred, default=0), max(trip_sizes_true, default=0))
+    plt.plot([0, max_val], [0, max_val], 'r--', label='Ideal Match (Size matches)')
+
+    plt.xlabel("True Size (Number of Transactions)")
+    plt.ylabel("Predicted Size (Number of Transactions)")
+    plt.title("Size Mismatch Analysis: Over-Merging vs. Over-Splitting")
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_bubble_chart():
+    """
+    Erstellt ein Bubble Chart:
+    X-Achse: Wahre Größe des Clusters
+    Y-Achse: F1-Score
+    Größe des Kreises: Anzahl der Cluster mit dieser (Größe, Score) Kombination
+    """
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    def draw_bubbles(ax, data, title, color):
+        if not data: return
+
+        counts = Counter((s, round(f, 4)) for s, f in data)
+
+        x_vals = [k[0] for k in counts.keys()]
+        y_vals = [k[1] for k in counts.keys()]
+        sizes = [v * 100 for v in counts.values()]  # Multiplikator für Sichtbarkeit
+
+        sc = ax.scatter(x_vals, y_vals, s=sizes, alpha=0.5, c=color, edgecolors='black')
+
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.set_xlabel("True Cluster Size (Transactions)")
+        ax.set_ylabel("F1 Score")
+        ax.set_ylim(-0.05, 1.05)
+        ax.grid(True, linestyle='--', alpha=0.6)
+
+        for size in [1, 10, 50]:
+            ax.scatter([], [], c=color, alpha=0.5, s=size * 10,
+                       label=f'{size} Occurrences', edgecolors='black')
+        ax.legend(title="Frequency", loc='lower right')
+
+    # --- Plot Trips ---
+    draw_bubbles(ax1, trip_data_for_bubble, "Trips: Performance vs. Size", "skyblue")
+
+    # --- Plot Wallets ---
+    draw_bubbles(ax2, wallet_data_for_bubble, "Wallets: Performance vs. Size", "salmon")
+
+    plt.tight_layout()
+    plt.show()
+
+
 def get_options():
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('-p', '--path', dest='rsc_path', type=str, help='Relative path to resource files',
@@ -355,4 +452,7 @@ if __name__ == "__main__":
     main()
 
     report(args.detailed)
-    plot()
+    if args.detailed:
+        plot()
+        plot_sizes()
+        plot_bubble_chart()

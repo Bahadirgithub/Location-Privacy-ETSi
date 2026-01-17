@@ -49,3 +49,1010 @@ Output file is   'attacks/test_attack.xml'
 
 -------------------- END of report --------------------
 
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 16:51:08
+Attack ended at          26/12/2025 16:55:26
+Runtime:                 258.6238739490509
+
+simulated annealing iterations: 2
+simulated annealing result: 349580.4904761904
+Best Genetic result: 0.0026724432269250365
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   87008 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:06:13
+Attack ended at          26/12/2025 17:11:32
+Runtime:                 319.3559045791626
+
+simulated annealing iterations: 2
+simulated annealing result: 349727.1571428571
+Best Genetic result: 0.0025073947012669183
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   83877 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:20:37
+Attack ended at          26/12/2025 17:21:42
+Runtime:                 64.59692525863647
+
+simulated annealing iterations: 2
+simulated annealing result: 349327.0738095238
+Best Genetic result: 0.0025259728645701694
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   81392 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:25:04
+Attack ended at          26/12/2025 17:25:11
+Runtime:                 7.3597352504730225
+
+simulated annealing iterations: 2
+simulated annealing result: 349734.40714285703
+Best Genetic result: 0.0022253923934344765
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   87192 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:29:13
+Attack ended at          26/12/2025 17:33:04
+Runtime:                 231.4123296737671
+
+simulated annealing iterations: 2
+simulated annealing result: 349794.6571428571
+Best Genetic result: 0.0029014112909001174
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   79093 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:42:01
+Attack ended at          26/12/2025 17:45:58
+Runtime:                 237.23106575012207
+
+simulated annealing iterations: 2
+simulated annealing result: 349487.07380952383
+Best Genetic result: 0.00286472010770574
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   78852 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 17:59:31
+Attack ended at          26/12/2025 18:04:32
+Runtime:                 301.1653928756714
+
+simulated annealing iterations: 2
+simulated annealing result: 349687.90714285703
+Best Genetic result: 0.005051861906765406
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   84279 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 18:19:58
+Attack ended at          26/12/2025 18:25:04
+Runtime:                 305.8834779262543
+
+simulated annealing iterations: 2
+simulated annealing result: 350015.3238095238
+Best Genetic result: 0.002468153727309575
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   87176 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 18:35:07
+Attack ended at          26/12/2025 18:35:12
+Runtime:                 4.601183176040649
+
+simulated annealing iterations: 2
+simulated annealing result: 349426.90714285715
+Best Genetic result: 0.0024778932148775477
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   88857 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 18:35:25
+Attack ended at          26/12/2025 18:40:40
+Runtime:                 315.6312735080719
+
+simulated annealing iterations: 2
+simulated annealing result: 349629.9071428571
+Best Genetic result: 0.002477580186183691
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86480 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        26/12/2025 18:48:44
+Attack ended at          26/12/2025 18:53:52
+Runtime:                 307.49340867996216
+
+simulated annealing iterations: 2
+simulated annealing result: 349606.9904761904
+Best Genetic result: 0.005225557295950832
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86540 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 21:52:39
+Attack ended at          28/12/2025 21:54:13
+Runtime:                 93.98399591445923
+
+simulated annealing iterations: 2
+simulated annealing result: 349690.138095238
+Best Genetic result: 0.10839944903218385
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   88567 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 22:04:17
+Attack ended at          28/12/2025 22:14:13
+Runtime:                 595.3476269245148
+
+simulated annealing iterations: 2
+simulated annealing result: 349850.38809523795
+Best Genetic result: 0.1133554975989004
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   76869 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 22:20:05
+Attack ended at          28/12/2025 22:31:08
+Runtime:                 662.9695703983307
+
+simulated annealing iterations: 2
+simulated annealing result: 349689.388095238
+Best Genetic result: 0.0070276715243785025
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   77937 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 22:32:27
+Attack ended at          28/12/2025 22:36:55
+Runtime:                 268.4949879646301
+
+simulated annealing iterations: 2
+simulated annealing result: 349750.5738095237
+Best Genetic result: 0.006963815093093651
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   88378 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 22:49:28
+Attack ended at          28/12/2025 22:55:09
+Runtime:                 341.4072222709656
+
+simulated annealing iterations: 2
+simulated annealing result: 92816.90743192422
+Best Genetic result: 0.2592811329159239
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54043 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 23:34:25
+Attack ended at          28/12/2025 23:40:02
+Runtime:                 336.9038739204407
+
+simulated annealing iterations: 2
+simulated annealing result: 93045.88353243399
+Best Genetic result: 0.9727940483119434
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54887 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 23:50:51
+Attack ended at          28/12/2025 23:50:52
+Runtime:                 1.789933681488037
+
+simulated annealing iterations: 2
+simulated annealing result: 92872.2163516445
+Best Genetic result: 0.5278918179521107
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54252 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 23:51:04
+Attack ended at          28/12/2025 23:51:57
+Runtime:                 53.133305072784424
+
+simulated annealing iterations: 2
+simulated annealing result: 92916.47405472388
+Best Genetic result: 1.3479761449185688
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53957 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        28/12/2025 23:53:06
+Attack ended at          28/12/2025 23:54:40
+Runtime:                 94.09038591384888
+
+simulated annealing iterations: 2
+simulated annealing result: 93130.00334086588
+Best Genetic result: 1.341867239158084
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53948 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 00:03:57
+Attack ended at          29/12/2025 00:04:05
+Runtime:                 8.2975914478302
+
+simulated annealing iterations: 2
+simulated annealing result: 92970.57805323531
+Best Genetic result: 1.3385355940385457
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53934 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 00:29:44
+Attack ended at          29/12/2025 00:34:48
+Runtime:                 304.64913511276245
+
+simulated annealing iterations: 2
+simulated annealing result: 93333.54186817932
+Best Genetic result: 1.3411655817425943
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53847 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:09:55
+Attack ended at          29/12/2025 01:17:26
+Runtime:                 450.60970735549927
+
+simulated annealing iterations: 2
+simulated annealing result: 93031.66126860485
+Best Genetic result: 2.4802837906675586
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54560 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:21:44
+Attack ended at          29/12/2025 01:25:10
+Runtime:                 205.86866664886475
+
+simulated annealing iterations: 2
+simulated annealing result: 92939.48536638179
+Best Genetic result: 2.4470760673900567
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54708 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:29:11
+Attack ended at          29/12/2025 01:32:44
+Runtime:                 212.76664924621582
+
+simulated annealing iterations: 2
+simulated annealing result: 93030.22847015041
+Best Genetic result: 0.8555264691124072
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54099 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:36:08
+Attack ended at          29/12/2025 01:39:33
+Runtime:                 205.0082676410675
+
+simulated annealing iterations: 2
+simulated annealing result: 93097.76154284504
+Best Genetic result: 0.8598167411504225
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54083 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:41:06
+Attack ended at          29/12/2025 01:44:43
+Runtime:                 216.8450756072998
+
+simulated annealing iterations: 2
+simulated annealing result: 92990.48277011866
+Best Genetic result: 0.4348469686442761
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53995 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 01:50:39
+Attack ended at          29/12/2025 01:53:56
+Runtime:                 196.90294528007507
+
+simulated annealing iterations: 2
+simulated annealing result: 93104.84509292626
+Best Genetic result: 0.0702822151469719
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   54602 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 12:53:13
+Attack ended at          29/12/2025 12:56:47
+Runtime:                 213.69837188720703
+
+simulated annealing iterations: 2
+simulated annealing result: 92838.38214635041
+Best Genetic result: 0.3484993631297757
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53813 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 13:39:55
+Attack ended at          29/12/2025 13:40:39
+Runtime:                 44.61828351020813
+
+simulated annealing iterations: 2
+simulated annealing result: 93106.93190231264
+Best Genetic result: 9.370373129830874
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53898 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 13:47:37
+Attack ended at          29/12/2025 13:48:48
+Runtime:                 71.76743602752686
+
+simulated annealing iterations: 2
+simulated annealing result: 93029.40362220845
+Best Genetic result: 10.834272646094055
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   52182 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 13:57:50
+Attack ended at          29/12/2025 14:00:00
+Runtime:                 130.7246334552765
+
+simulated annealing iterations: 2
+simulated annealing result: 92945.91589333488
+Best Genetic result: 1.76711539143789
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53184 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 14:01:44
+Attack ended at          29/12/2025 14:03:48
+Runtime:                 123.74440622329712
+
+simulated annealing iterations: 2
+simulated annealing result: 93357.08036881518
+Best Genetic result: 1.7304124333258724
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   53213 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 14:05:34
+Attack ended at          29/12/2025 14:07:34
+Runtime:                 120.38715505599976
+
+simulated annealing iterations: 2
+simulated annealing result: 93146.44511684218
+Best Genetic result: 6.243144655232918
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   52699 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 14:13:34
+Attack ended at          29/12/2025 14:20:24
+Runtime:                 410.01309537887573
+
+simulated annealing iterations: 2
+simulated annealing result: 92826.08296918264
+Best Genetic result: 12.473239308662503
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_1.xml'
+- of file size   52836 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 14:51:53
+Attack ended at          29/12/2025 15:02:31
+Runtime:                 638.2789669036865
+
+simulated annealing iterations: 2
+simulated annealing result: 92963.04388781608
+Best Genetic result: 3.2322142794518784
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new.xml'
+- of file size   52888 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 15:17:22
+Attack ended at          29/12/2025 15:20:07
+Runtime:                 165.51651978492737
+
+simulated annealing iterations: 2
+simulated annealing result: 93181.40593729843
+Best Genetic result: 0.5714089887241824
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new.xml'
+- of file size   53724 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 15:33:24
+Attack ended at          29/12/2025 15:35:42
+Runtime:                 138.3519012928009
+
+simulated annealing iterations: 2
+simulated annealing result: 93024.49291911686
+Best Genetic result: 0.5646886727399562
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new.xml'
+- of file size   53777 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 15:38:16
+Attack ended at          29/12/2025 15:38:51
+Runtime:                 34.336644411087036
+
+simulated annealing iterations: 2
+simulated annealing result: 93143.21500093861
+Best Genetic result: 0.011444218663225376
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new.xml'
+- of file size   86465 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 15:40:21
+Attack ended at          29/12/2025 15:48:58
+Runtime:                 516.6010894775391
+
+simulated annealing iterations: 2
+simulated annealing result: 93756.11668543333
+Best Genetic result: 0.014476290889768902
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86451 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 15:52:42
+Attack ended at          29/12/2025 16:01:37
+Runtime:                 534.7620847225189
+
+simulated annealing iterations: 2
+simulated annealing result: 93161.0224983812
+Best Genetic result: 0.014529873957471224
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86493 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        29/12/2025 16:05:38
+Attack ended at          29/12/2025 16:14:39
+Runtime:                 540.758455991745
+
+simulated annealing iterations: 2
+simulated annealing result: 93142.09870127727
+Best Genetic result: 0.013445176167486333
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86465 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 12:32:03
+Attack ended at          31/12/2025 12:36:57
+Runtime:                 294.5080144405365
+
+simulated annealing iterations: 2
+simulated annealing result: 93001.56666412126
+Best Genetic result: 0.012834779764423128
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86451 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 13:00:57
+Attack ended at          31/12/2025 13:06:26
+Runtime:                 328.5006535053253
+
+simulated annealing iterations: 2
+simulated annealing result: 93087.05058649657
+Best Genetic result: 0.0072071758471793914
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86451 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 13:46:37
+Attack ended at          31/12/2025 13:51:49
+Runtime:                 312.04253101348877
+
+simulated annealing iterations: 2
+simulated annealing result: 93211.43773251028
+Best Genetic result: 0.00945264960440089
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86465 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 14:55:10
+Attack ended at          31/12/2025 15:00:39
+Runtime:                 328.7407138347626
+
+simulated annealing iterations: 2
+simulated annealing result: 93146.83646592284
+Best Genetic result: 0.012152899501530798
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   86465 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 15:05:02
+Attack ended at          31/12/2025 15:33:32
+Runtime:                 1709.5840010643005
+
+simulated annealing iterations: 2
+simulated annealing result: 1770524.0070707055
+Best Genetic result: 0.007003885774901741
+Attacker knowledge file is   'spider_250_7_0_attacker.xml'
+- of file size               2830296 bytes
+
+Output file is   'attacks/genetic_attack_spider250.xml'
+- of file size   514629 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 15:47:01
+Attack ended at          31/12/2025 15:53:29
+Runtime:                 388.1371121406555
+
+simulated annealing iterations: 2
+simulated annealing result: 349668.40714285715
+Best Genetic result: 0.00853584081611365
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack_spider50.xml'
+- of file size   96539 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        31/12/2025 15:57:04
+Attack ended at          31/12/2025 16:16:10
+Runtime:                 1146.0385122299194
+
+simulated annealing iterations: 2
+simulated annealing result: 349454.40714285703
+Best Genetic result: 0.008542882829011946
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack_spider50.xml'
+- of file size   96511 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        01/01/2026 16:40:23
+Attack ended at          01/01/2026 16:45:24
+Runtime:                 300.8479459285736
+
+simulated annealing iterations: 2
+simulated annealing result: 349676.4071428571
+Best Genetic result: 0.008371275241756656
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   96525 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        01/01/2026 16:47:41
+Attack ended at          01/01/2026 16:52:42
+Runtime:                 300.591078042984
+
+simulated annealing iterations: 2
+simulated annealing result: 349530.5738095238
+Best Genetic result: 0.008178933913950298
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   96525 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        01/01/2026 17:48:47
+Attack ended at          01/01/2026 17:53:40
+Runtime:                 292.4711709022522
+
+simulated annealing iterations: 2
+simulated annealing result: 349517.8714285714
+Best Genetic result: 0.00865184572161385
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   73509 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        02/01/2026 18:03:07
+Attack ended at          02/01/2026 18:09:40
+Runtime:                 393.15480637550354
+
+simulated annealing iterations: 2
+simulated annealing result: 349639.2404761904
+Best Genetic result: 0.03148857855138037
+Attacker knowledge file is   'spider_50_7_0_attacker.xml'
+- of file size               566856 bytes
+
+Output file is   'attacks/genetic_attack.xml'
+- of file size   77499 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        02/01/2026 18:11:30
+Attack ended at          02/01/2026 18:19:58
+Runtime:                 507.54118037223816
+
+simulated annealing iterations: 2
+simulated annealing result: 92962.0728276547
+Best Genetic result: 0.01945201517966514
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new.xml'
+- of file size   82237 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_genetic.py
+Attack started at        03/01/2026 17:14:07
+Attack ended at          03/01/2026 17:24:40
+Runtime:                 633.2615497112274
+
+simulated annealing iterations: 2
+simulated annealing result: 92824.84628308234
+Best Genetic result: 0.019257929577161093
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_new2.xml'
+- of file size   82447 bytes
+
+-------------------- END of report --------------------
+
+-------------------- Report of ADVANCED ATTACK --------------------
+
+Name of attack script:   /home/ewin/PythonProjects/Location Privacy/location-privacy-etsi/attacker/attack_advanced.py
+Attack started at        03/01/2026 19:38:28
+Attack ended at          03/01/2026 19:38:31
+Runtime:                 2.6080758571624756
+
+simulated annealing iterations: 2
+simulated annealing result: 100103.7178925641
+Attacker knowledge file is   'ingolstadt_75_2_attacker.xml'
+- of file size               877973 bytes
+
+Output file is   'attacks/genetic_attack_adv.xml'
+- of file size   93507 bytes
+
+-------------------- END of report --------------------
+
