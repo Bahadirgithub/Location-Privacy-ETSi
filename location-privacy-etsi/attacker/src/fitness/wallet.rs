@@ -7,11 +7,13 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
     let mut current_wallet_sums = vec![0u32; num_wallets];
 
     //Parameter tuning
-    const TOTAL_ERROR_MULT: f64 = 3.5;
-    const HOME_BONUS: f64 = 70.0;
-    const SHORT_TRIP_PENALTY: f64 = 4000.0;
-    const TIME_TELEP_PENALTY: f64 = 8000.0;
-    const LOC_TELEP_PENALTY: f64 = 4000.0;
+    const TOTAL_ERROR_MULT: f64 = 3.0;
+    const HOME_BONUS: f64 = 80.0;
+    const SHORT_TRIP_PENALTY: f64 = 4500.0;
+    const TIME_TELEP_PENALTY: f64 = 350.0;
+    const LOC_TELEP_PENALTY: f64 = 700.0;
+    const JACCARD_THRESHOLD: f64 = 0.85;
+    const JACCARD_BONUS: f64 = 80.0;
 
     for (trip_id, wallet_id) in individual.iter().enumerate() {
         let trip_sum = trips[trip_id].cost;
@@ -71,13 +73,13 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
 
                 if jaccard_score > best_jaccard_score { best_jaccard_score = jaccard_score};
 
-                if jaccard_score > 0.7{
+                if jaccard_score > JACCARD_THRESHOLD{
                     break; //Falls Score hoch genug ist
                 }
             }
 
-            if best_jaccard_score > 0.7{
-                bonus += best_jaccard_score * 10.0;
+            if best_jaccard_score > JACCARD_THRESHOLD{
+                bonus += best_jaccard_score * JACCARD_BONUS;
             }
         }
     }
