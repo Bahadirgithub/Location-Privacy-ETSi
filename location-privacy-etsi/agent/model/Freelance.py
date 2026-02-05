@@ -4,6 +4,7 @@ import math
 from model.Agent import Agent
 from model.AgentType import AgentType
 
+
 class Freelance(Agent):
     """
     Freelance Agent: Arbeitet unabhängig, hat flexible Zeitpläne.
@@ -31,7 +32,7 @@ class Freelance(Agent):
         act_conf = self.config['activity']
         num_min = act_conf.get('num_activities_min', 1)
         num_max = act_conf.get('num_activities_max', len(self.leisure_locations))
-        num_max = max(num_min, num_max) # Safety
+        num_max = max(num_min, num_max)  # Safety
 
         count = random.randint(num_min, min(num_max, len(self.leisure_locations)))
         if count == 0:
@@ -65,7 +66,19 @@ class Freelance(Agent):
         if not chain_trips:
             # Einzelne Trips
             for activity_time, location in todays_schedule:
-                self.set_time(activity_time)
+
+                # --- FIX START ---
+                # Check if we are early or late. Never set time backwards!
+                target_start = datetime.combine(self.current_time.date(), activity_time)
+
+                if target_start > self.current_time:
+                    # We are early, wait until schedule
+                    self.set_time(activity_time)
+                else:
+                    # We are late, start immediately (pass)
+                    # This preserves the travel time accumulated from the previous trip
+                    pass
+                # --- FIX END ---
 
                 # WICHTIG: Hier wird nun mean/std für die Dauer verwendet
                 stay_duration = self.get_duration(act_conf)
@@ -74,7 +87,7 @@ class Freelance(Agent):
                 a2 = self.advance_step(self.home, timedelta(0))
                 actions.extend([a1, a2])
         else:
-            # Trip-Kette
+            # Trip-Kette (This block was already safe because it uses flow logic)
             first_time = todays_schedule[0][0]
             self.set_time(first_time)
 
