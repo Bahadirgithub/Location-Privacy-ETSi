@@ -27,19 +27,16 @@ import random
 agent_config = None
 
 
-# ---------------------------------------------------------------------------
-# Hilfsfunktionen
-# ---------------------------------------------------------------------------
-
 # Parse map and create locations from edges
 def create_test_locations(map_path):
     locations = []
-    edges = map_parser.parse_map_edges(map_path, districts)
-    for e in edges:
-        loc = Location(e)
+    edges_data = map_parser.parse_map_edges(map_path, districts)
+    for data in edges_data:
+        loc = Location(data['id'], data['x'], data['y'])
         locations.append(loc)
+
         for d in districts:
-            if e in d.edges:
+            if data['id'] in d.edges:
                 d.locations.append(loc)
     return locations
 

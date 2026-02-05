@@ -47,6 +47,25 @@ class Agent(ABC):
         """
         self.print_route(self.current_time, self.current_location, destination)
 
+        #Calculate Distance (Euclidean)
+        dx = self.current_location.x - destination.x
+        dy = self.current_location.y - destination.y
+        dist_meters = math.sqrt(dx * dx + dy * dy)
+        #print("Distance:", dist_meters)
+
+        #Estimate Travel Time
+        avg_speed_mps = 5 #5m/s = 18km/h
+        travel_seconds = dist_meters / avg_speed_mps
+
+        #Add buffer
+        travel_seconds *= random.uniform(1.3, 1.5)
+        #Ensure min travel time
+        travel_seconds = max(200.0, travel_seconds)
+        #print("travel_time (s):", travel_seconds)
+
+        #Calculate depature time
+        self.current_time += timedelta(seconds=travel_seconds)
+
         # Calculate departure time relative to simulation start
         # NOTE: The /10 factor speeds up the simulation depart times.
         # Ensure this matches your SUMO config.

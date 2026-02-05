@@ -20,9 +20,7 @@ agent_profiles:
     work:
       duration: 8.5    # 8h Arbeit + 30min Pause
       mean: 8.0        # Ziel: 08:00 Uhr
-      std: 0.75        # Abweichung: +/- 45 Min (Kernzeit-Feeling)
-      start: 8.0       # Fallback
-      end: 16.5
+      std: 1.5        # Abweichung: +/- 90 Min
     grocery:
       prob: 0.5
       duration: 0.75   # 45 Min Einkauf
