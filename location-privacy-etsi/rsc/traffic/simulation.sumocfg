@@ -17,7 +17,7 @@
         <additional-files value="spider_medium_detectors.add.xml"/>
     </input> -->
 
-    <!-- <input>
+    <!--input>
         <net-file value="manhattan_grid.xml"/>
         <route-files value="routes.xml"/>
         <additional-files value="manhattan_detectors.add.xml"/>

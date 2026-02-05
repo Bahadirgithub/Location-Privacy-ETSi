@@ -21,7 +21,7 @@ else:
 
 
 
-def run(vehicle_map, days):
+def run(vehicle_map):
     # using the detectors.add.xml file to extract all relevant junctions 
     detectors_tree = etree.parse(in_path + detector_file)
     detectors_root = detectors_tree.getroot()
@@ -67,21 +67,9 @@ def run(vehicle_map, days):
     step = 0
     enumerator = 0
     print('Running Simulation ...')
-
-    total_trips = len(vehicle_map)
-    pbar = tqdm(total=total_trips, desc="Finished Trips", unit="trip")
-
     while traci.simulation.getMinExpectedNumber() > 0:
         # advance traci
         traci.simulationStep()
-
-        # Prüfen, wie viele Autos in diesem Schritt angekommen sind
-        arrived_count = traci.simulation.getArrivedNumber()
-
-        # Balken aktualisieren, wenn Autos angekommen sind
-        if arrived_count > 0:
-            pbar.update(arrived_count)
-
         # getting all detectors (induction loops) that are in the simulation
         det_list = traci.inductionloop.getIDList()
         for id in det_list:
@@ -96,8 +84,6 @@ def run(vehicle_map, days):
                     enumerator += 1
 
         step += 1
-
-    pbar.close()
 
     # often a detector will find the same vehicle at timestep x and also at timestep x+1 and sometimes even at x+2
     # at this point those entries are detected
@@ -272,7 +258,6 @@ def get_options():
     parser.set_defaults(feature=False)
     parser.add_argument('--reportpath', dest='report_path', type=str, default='../rsc/reports/', help='Report output directory')
     parser.add_argument('--reportname', dest='report_name', type=str, help='Set report name', default='report.txt')
-    parser.add_argument('--days', dest='days', type=int, default=1, help='Simulated days')
     parser.add_argument('--no-report', dest='report', action='store_false', help='Do not write report')
     parser.set_defaults(report=True)
     return parser.parse_args()
@@ -314,7 +299,7 @@ if __name__ == "__main__":
 
     traci.start([sumoBinary, "-c", in_path + sumocfg, "--tripinfo-output", in_path + tripinfo_file, '--no-step-log'])
 
-    run(vehicle_map, args.days)
+    run(vehicle_map)
     # Write report except flag --no-report is set
     if args.report:
         report()
