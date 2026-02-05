@@ -63,9 +63,6 @@ class Agent(ABC):
         travel_seconds = max(200.0, travel_seconds)
         #print("travel_time (s):", travel_seconds)
 
-        #Calculate depature time
-        self.current_time += timedelta(seconds=travel_seconds)
-
         # Calculate departure time relative to simulation start
         # NOTE: The /10 factor speeds up the simulation depart times.
         # Ensure this matches your SUMO config.
@@ -74,6 +71,8 @@ class Agent(ABC):
 
         new_step = RoutingStep(self, depart, self.current_location, destination)
         self.trip_ids.append(new_step.id)
+
+        self.current_time += timedelta(seconds=travel_seconds)
 
         self.current_location = destination
         self.current_time += stay_time
