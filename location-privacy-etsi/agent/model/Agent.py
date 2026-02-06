@@ -9,6 +9,8 @@ from model.RoutingStep import RoutingStep
 
 TIME_ACCEL = 10.0
 MIN_DEPART_GAP = 1
+TRAVEL_SLOWDOWN_MULT = 2.5
+TRAVEL_PAD_SEC = 1200
 
 class Agent(ABC):
     """
@@ -66,19 +68,20 @@ class Agent(ABC):
         #Ensure min travel time
         travel_seconds = max(200.0, travel_seconds)
 
+        travel_ub_seconds = max(travel_seconds * TRAVEL_SLOWDOWN_MULT, travel_seconds + TRAVEL_PAD_SEC)
+
         # Calculate departure time relative to simulation start
         # NOTE: The /10 factor speeds up the simulation depart times.
         # Ensure this matches your SUMO config.
         total_seconds = (self.current_time - self.start_time).total_seconds()
-        depart_int = int(math.floor(total_seconds / TIME_ACCEL))
+        depart_0 = int(math.floor(total_seconds / TIME_ACCEL))
+        depart_int = max(depart_0, self.last_depart + 1, self.last_end_depart + MIN_DEPART_GAP)
 
         stay_seconds = max(0.0, stay_time.total_seconds())
-        min_depart_after_prev = self.last_depart + MIN_DEPART_GAP
-        depart_int = max(depart_int, self.last_depart + 1, min_depart_after_prev)
 
-        pushed_by = depart_int - int(math.floor(total_seconds / TIME_ACCEL))
-        if pushed_by > 0:
-            self.current_time += timedelta(seconds=pushed_by * TIME_ACCEL)
+        wait_steps = depart_int - depart_0
+        if wait_steps > 0:
+            self.current_time += timedelta(seconds=wait_steps * TIME_ACCEL)
 
         depart_str = str(depart_int)
 
@@ -90,9 +93,9 @@ class Agent(ABC):
         self.current_location = destination
         self.current_time += stay_time
 
+        end_depart = (depart_int + math.ceil(travel_ub_seconds / TIME_ACCEL) + math.ceil(stay_seconds / TIME_ACCEL))
         self.last_depart = depart_int
-        end_depart = (depart_int + int(math.ceil(total_seconds / TIME_ACCEL)) + int(math.ceil(stay_seconds / TIME_ACCEL)))
-        self.last_end_depart = max(self.last_end_depart, end_depart)
+        self.last_end_depart = end_depart
 
         self.print_route(self.current_time, new_step.start, new_step.end)
         return new_step
