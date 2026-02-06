@@ -7,6 +7,9 @@ from abc import ABC, abstractmethod
 # Requires RoutingStep to be imported or available in path
 from model.RoutingStep import RoutingStep
 
+TIME_ACCEL = 10.0
+MIN_DEPART_GAP = 1
+
 class Agent(ABC):
     """
     Abstract base class for all vehicle agents.
@@ -21,7 +24,8 @@ class Agent(ABC):
         self.current_location = home
         self.trip_ids = []
         #Track last departure
-        self.last_depart = -1
+        self.last_depart = -1 #last depart (int seconds)
+        self.last_end_depart = -1 #last known end time (int seconds)
 
     def generate_demand(self, number_of_days):
         """Generate demand for N days starting from a fixed date."""
@@ -47,7 +51,6 @@ class Agent(ABC):
         Moves the agent to the destination and records the trip.
         stay_time: timedelta object representing how long they stay at the destination.
         """
-        self.print_route(self.current_time, self.current_location, destination)
 
         #Calculate Distance (Euclidean)
         dx = self.current_location.x - destination.x
@@ -55,7 +58,7 @@ class Agent(ABC):
         dist_meters = math.sqrt(dx * dx + dy * dy)
 
         #Estimate Travel Time
-        avg_speed_mps = 5 #5m/s = 18km/h
+        avg_speed_mps = 5.0 #5m/s = 18km/h
         travel_seconds = dist_meters / avg_speed_mps
 
         #Add buffer
@@ -65,24 +68,33 @@ class Agent(ABC):
 
         # Calculate departure time relative to simulation start
         # NOTE: The /10 factor speeds up the simulation depart times.
-        TIME_ACCEL = 10.0
         # Ensure this matches your SUMO config.
         total_seconds = (self.current_time - self.start_time).total_seconds()
         depart_int = int(math.floor(total_seconds / TIME_ACCEL))
 
-        if depart_int < self.last_depart:
-            depart_int = self.last_depart + 1
+        stay_seconds = max(0.0, stay_time.total_seconds())
+        min_depart_after_prev = self.last_depart + MIN_DEPART_GAP
+        depart_int = max(depart_int, self.last_depart + 1, min_depart_after_prev)
 
-        self.last_depart = depart_int
-        depart = str(depart_int)
+        pushed_by = depart_int - int(math.floor(total_seconds / TIME_ACCEL))
+        if pushed_by > 0:
+            self.current_time += timedelta(seconds=pushed_by * TIME_ACCEL)
 
-        new_step = RoutingStep(self, depart, self.current_location, destination)
+        depart_str = str(depart_int)
+
+        new_step = RoutingStep(self, depart_str, self.current_location, destination)
         self.trip_ids.append(new_step.id)
 
+        #Advance current_time by actual trave and stay
         self.current_time += timedelta(seconds=travel_seconds)
-
         self.current_location = destination
         self.current_time += stay_time
+
+        self.last_depart = depart_int
+        end_depart = (depart_int + int(math.ceil(total_seconds / TIME_ACCEL)) + int(math.ceil(stay_seconds / TIME_ACCEL)))
+        self.last_end_depart = max(self.last_end_depart, end_depart)
+
+        self.print_route(self.current_time, new_step.start, new_step.end)
         return new_step
 
     # --- HELPER FUNCTIONS ---
@@ -104,6 +116,7 @@ class Agent(ABC):
 
         desired_dt = datetime.combine(self.current_time.date(), t)
 
+        #never go backwards in time
         if desired_dt > self.current_time:
             self.current_time = desired_dt
 
