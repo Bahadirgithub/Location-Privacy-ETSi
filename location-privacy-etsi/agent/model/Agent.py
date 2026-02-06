@@ -20,6 +20,8 @@ class Agent(ABC):
         self.start_time = None
         self.current_location = home
         self.trip_ids = []
+        #Track last departure
+        self.last_depart = -1
 
     def generate_demand(self, number_of_days):
         """Generate demand for N days starting from a fixed date."""
@@ -51,7 +53,6 @@ class Agent(ABC):
         dx = self.current_location.x - destination.x
         dy = self.current_location.y - destination.y
         dist_meters = math.sqrt(dx * dx + dy * dy)
-        #print("Distance:", dist_meters)
 
         #Estimate Travel Time
         avg_speed_mps = 5 #5m/s = 18km/h
@@ -61,13 +62,19 @@ class Agent(ABC):
         travel_seconds *= random.uniform(1.3, 1.5)
         #Ensure min travel time
         travel_seconds = max(200.0, travel_seconds)
-        #print("travel_time (s):", travel_seconds)
 
         # Calculate departure time relative to simulation start
         # NOTE: The /10 factor speeds up the simulation depart times.
+        TIME_ACCEL = 10.0
         # Ensure this matches your SUMO config.
         total_seconds = (self.current_time - self.start_time).total_seconds()
-        depart = str(math.floor(total_seconds / 10))
+        depart_int = int(math.floor(total_seconds / TIME_ACCEL))
+
+        if depart_int < self.last_depart:
+            depart_int = self.last_depart + 1
+
+        self.last_depart = depart_int
+        depart = str(depart_int)
 
         new_step = RoutingStep(self, depart, self.current_location, destination)
         self.trip_ids.append(new_step.id)
@@ -83,6 +90,7 @@ class Agent(ABC):
     def set_time(self, time_input):
         """
         Sets the current time of the day.
+        Added safety: Never travels backwards
         Accepts:
         - float (e.g. 14.5 = 14:30)
         - datetime.time object
@@ -94,8 +102,10 @@ class Agent(ABC):
         else:
             raise ValueError(f"set_time expects float or datetime.time, got {type(time_input)}")
 
-        # Keep the current date, update the time
-        self.current_time = datetime.combine(self.current_time.date(), t)
+        desired_dt = datetime.combine(self.current_time.date(), t)
+
+        if desired_dt > self.current_time:
+            self.current_time = desired_dt
 
     def get_duration(self, config_entry):
         """
@@ -133,7 +143,7 @@ class Agent(ABC):
     def time_from_float(self, timefloat):
         # Handle overflow (e.g. 24.5 -> 00:30) if necessary,
         # but usually start times are 0-24.
-        timefloat = timefloat % 24
+        timefloat = max(0.0, min(23.999, float(timefloat)))
         hours = int(math.floor(timefloat))
         minutes = int((timefloat - hours) * 60)
         return time(hours, minutes)
