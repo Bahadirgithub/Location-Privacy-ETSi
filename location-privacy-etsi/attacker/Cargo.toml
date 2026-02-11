@@ -1,0 +1,16 @@
+[package]
+name = "genetic"
+version = "0.1.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "genetic"
+crate-type = ["cdylib"]
+
+[dependencies]
+#* = neuste version
+pyo3 = "*" #Python Konnektor
+rand = "0.8" #Random Bibliothek
+indicatif = "*" #Progress Bar
+rayon = "*" #Multiprocessing
