@@ -26,10 +26,17 @@ def parse_map_edges(filename, districts):
         if e.get('function') != 'internal' and edge_id is not None:
             e_from = e.get('from')
             edge_start = junctions[e_from]
+
             if edge_start is None:
                 continue
+
             for d in districts:
                 if geometry.point_in_convex_polygon(d.polygon, edge_start):
                     d.edges.append(edge_id)
-            locations.append(edge_id)
+
+            locations.append({
+                'id': edge_id,
+                'x': edge_start[0],
+                'y': edge_start[1],
+            })
     return locations

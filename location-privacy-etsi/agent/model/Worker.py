@@ -1,71 +1,74 @@
 from datetime import timedelta
-from datetime import time
-from datetime import datetime
-from datetime import date
-
 import random
-import numpy as np
-
 from model.Agent import Agent
 from model.AgentType import AgentType
 
-
-
 class Worker(Agent):
-    # Constructor
-    # id: A vehicle ID for the given agent
-    # locations: A list of locations the agent is able to visit
-    # home: A distinct home location
-    # chore: chore that is done during the week and on the weekend
-    # work: A distinct work location
-    def __init__(self, vehicle_id, home, work, chore, weekend_chores):
+    def __init__(self, vehicle_id, home, work, grocery, errands, config):
         super().__init__(vehicle_id, home)
         self.type = AgentType.WORKER
-        self.chore = chore
         self.work = work
-        self.weekend_chores = weekend_chores
+        self.grocery = grocery
+        self.config = config
 
-        work_time_float = random.normalvariate(8, 1)
-        work_duration_float = random.normalvariate(8, 1)
-        self.work_time = self.time_from_float(work_time_float)
-        self.work_duration = self.timedelta_from_float(work_duration_float)
+        # Handle None or Numpy arrays safely
+        if errands is None:
+            self.errands = []
+        else:
+            self.errands = list(errands)
 
-        chore_time_float = random.uniform(work_time_float + work_duration_float, 22)
-        chore_duration_float = random.uniform(0, 23 - chore_time_float)
-        self.chore_time = self.time_from_float(chore_time_float)
-        self.chore_duration = self.timedelta_from_float(chore_duration_float)
-
-        self.weekend_chore_times = []
-        prev_time = 6
-        max_time = 23
-        for i in range(len(weekend_chores)):
-            chores_remaining = (len(weekend_chores) - i)
-            remaining_time = max_time - prev_time - 0.5 * chores_remaining
-            prev_time = random.uniform(prev_time, prev_time + remaining_time / chores_remaining)
-            prev_time += 0.5
-            self.weekend_chore_times.append(self.time_from_float(prev_time))
-
-    # Generate a days worth of actions for the given agent.
-    # Returns an array of RoutingStep objects
     def generate_day(self):
         actions = []
-        if self.current_time.weekday() < 5:
 
-            # Departure time with a random perturbation
-            departure_time = (datetime.combine(date.today(), self.work_time) + timedelta(seconds=random.normalvariate(600,300))).time()
+        # --- 1. Arbeitsbeginn berechnen (Dynamisch vs. Fest) ---
+        work_conf = self.config['work']
 
-            self.set_time_t(departure_time) #without randomness use self.set_time_t(self.work_time)
-            a1 = self.advance_step(self.work, self.work_duration)
-            a2 = self.advance_step(self.home, timedelta(0))
-            self.set_time_t(self.chore_time)
-            a3 = self.advance_step(self.chore, self.chore_duration)
-            a4 = self.advance_step(self.home, timedelta(0))
-            actions.extend([a1, a2, a3, a4])
-            self.end_day()
+        # Prüfen, ob statistische Verteilung vorliegt
+        if 'mean' in work_conf and 'std' in work_conf:
+            start_float = random.gauss(work_conf['mean'], work_conf['std'])
         else:
-            for i in range(len(self.weekend_chore_times)):
-                self.set_time_t(self.weekend_chore_times[i])
-                a = self.advance_step(self.weekend_chores[i], timedelta(0))
-                actions.append(a)
-            self.end_day()
+            start_float = work_conf['start']
+
+        # --- 2. Arbeitsdauer berechnen ---
+        # Wir nehmen die Differenz aus der Config (z.B. 16 - 8 = 8h)
+        # und wenden sie auf die gewürfelte Startzeit an.
+        ref_start = work_conf.get('start', 8.0)
+        ref_end = work_conf.get('end', 16.0)
+        duration_hours = ref_end - ref_start
+
+        # Sicherheitsnetz, falls Config unlogisch ist
+        if duration_hours <= 0:
+            duration_hours = 8.0
+
+        # Startzeit setzen
+        self.set_time(start_float)
+
+        # 1) Fahrt zur Arbeit
+        a1 = self.advance_step(self.work, timedelta(hours=duration_hours))
+        actions.append(a1)
+
+        # 2) Rückfahrt nach Hause
+        a2 = self.advance_step(self.home, timedelta(0))
+        actions.append(a2)
+
+        # 3) Wocheneinkauf (Grocery)
+        # Hier nutzen wir get_duration, das mean/std aus der Config liest
+        if random.random() < self.config['grocery']['prob']:
+            stay_duration = self.get_duration(self.config['grocery'])
+
+            a3 = self.advance_step(self.grocery, stay_duration)
+            a4 = self.advance_step(self.home, timedelta(0))
+            actions.extend([a3, a4])
+
+        # 4) Besorgungen (Errands)
+        if self.errands:
+            if random.random() < self.config['errands']['prob']:
+                loc = random.choice(self.errands)
+                stay_duration = self.get_duration(self.config['errands'])
+
+                a5 = self.advance_step(loc, stay_duration)
+                a6 = self.advance_step(self.home, timedelta(0))
+                actions.extend([a5, a6])
+
+        self.end_day()
         return actions

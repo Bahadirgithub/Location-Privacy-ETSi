@@ -7,8 +7,11 @@ generation:
   outpath: ../rsc/traffic/
   agents: 200
   days: 1
-  parttime: 20                 # percentage of part-time-workers
-  nighttime: 0                 # percentage of night-time-workers
+
+  # --- HINZUGEFÜGT ---
+  # Definiert den Pfad zur neuen Agenten-Konfigurationsdatei
+  agentconfig: ../rsc/config/agent_profiles.yaml
+
   mapin: &map 'ingolstadt.xml'
   net_prefix: 'ingolstadt'
   homedistrict: '"0,0 300000,0 300000,500000 0,500000"' # polygon which uses sumo coordinates and the points have to counterclockwise
@@ -54,13 +57,13 @@ attacker:
 
 attackerAdvanced:
   run: False
-  path: ../../attacker                  # path to attacker script  
+  path: ../../attacker                  # path to attacker script
   attack: attack_advanced.py              # name of attacker script
-  
-  input: *saout                          # input attacker knowledge (-k argument) 
-  output: &aaout attack_advanced.xml     # output file name (-o argument)  
+
+  input: *saout                          # input attacker knowledge (-k argument)
+  output: &aaout attack_advanced.xml     # output file name (-o argument)
   simulatedTimes: manh_300_simulated-times.xml    # file with the simulated times
-  simulatedAnnealing: 1                  # number of iterations 
+  simulatedAnnealing: 1                  # number of iterations
   report: True
   reportpath: ../rsc/reports/
   reportname: report.txt

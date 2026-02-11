@@ -14,14 +14,12 @@ import yaml
 # Writes outputs to rsc/traffic
 ##########
 
-def generate(agents, parttime, nighttime, days):
+def generate(agents, days):
     # Compose command 'exe' and execute it
     exe = 'cd ' + '../../agent' + '&& python ' + 'agent_generation.py'
     #exe += ' --inpath ' + '../attacker/utils/'                  # default inpath is rsc/traffic
     # exe += ' --outpath ' + '../attacker/utils/'
-    exe += ' --agents ' + str(generation.get('agents'))
-    exe += ' --parttime ' + str(generation.get('parttime'))
-    exe += ' --nighttime ' + str(generation.get('nighttime'))
+    exe += ' --agents ' + str(agents)
     exe += ' --days ' + str(days)
     exe += ' --mapin ' + str(generation.get('mapin'))
     exe += ' --routesout ' + str(generation.get('groutesout'))
@@ -144,16 +142,26 @@ def main():
     # generate(agents, part-time worker percentage, number of days) runs the agent-generation
     # simulate runs the i-th simulation and creates a temporary output challengeri.xml
     # generateTimes updates times based on the challengeri.xml file
+    edges.clear()
 
+    x = 50
     for i in range(10):
-        generate(200, 5, 5, 2)
+        print("i=",i)
+        if i > 8:
+            x = 400
+        elif i > 5:
+            x = 200
+        elif i > 2:
+            x = 100
+        print("x=",x)
+        generate(x, 1)
         simulate('challenger' + str(i) + '.xml')
         generateTimes('challenger' + str(i) + '.xml')
         # Delete challengeri.xml when it is not needed any longer
         os.remove('challenger' + str(i) + '.xml')
 
     # Write travel times of each edge to an XML file in the rsc/knowledge folder
-    createTimeFile('../../rsc/knowledge/simulated-times.xml')
+    createTimeFile('simulated-times_ingolstadt.xml')
 
 if __name__ == '__main__':
     config = yaml.load(open('../../rsc/config/config.yaml'), Loader=yaml.FullLoader)
