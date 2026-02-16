@@ -6,14 +6,24 @@ pub fn fitness_wallet(individual: &[u32], num_wallets: usize, trips: &[Trip], so
     let mut wallets: Vec<Vec<&Trip>> = vec![Vec::new(); num_wallets];
     let mut current_wallet_sums = vec![0u32; num_wallets];
 
-    //Parameter tuning
-    const TOTAL_ERROR_MULT: f64 = 3.0;
-    const HOME_BONUS: f64 = 80.0;
-    const SHORT_TRIP_PENALTY: f64 = 4500.0;
-    const TIME_TELEP_PENALTY: f64 = 350.0;
-    const LOC_TELEP_PENALTY: f64 = 700.0;
-    const JACCARD_THRESHOLD: f64 = 0.85;
-    const JACCARD_BONUS: f64 = 80.0;
+    /*Gefundene Parameter: Spider
+    const TOTAL_ERROR_MULT: f64 = 2.23;
+    const HOME_BONUS: f64 = 183.2;
+    const SHORT_TRIP_PENALTY: f64 = 5784.6;
+    const TIME_TELEP_PENALTY: f64 = 381;
+    const LOC_TELEP_PENALTY: f64 = 2332.47;
+    const JACCARD_THRESHOLD: f64 = 0.59;
+    const JACCARD_BONUS: f64 = 150;
+    */
+
+    //Gefundene Parameter: Ingolstadt
+    const TOTAL_ERROR_MULT: f64 = 2.9;
+    const HOME_BONUS: f64 = 186.7;
+    const SHORT_TRIP_PENALTY: f64 = 8023.9;
+    const TIME_TELEP_PENALTY: f64 = 568.9;
+    const LOC_TELEP_PENALTY: f64 = 2756.5;
+    const JACCARD_THRESHOLD: f64 = 0.72;
+    const JACCARD_BONUS: f64 = 261.5;
 
     for (trip_id, wallet_id) in individual.iter().enumerate() {
         let trip_sum = trips[trip_id].cost;
