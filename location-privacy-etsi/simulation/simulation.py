@@ -72,15 +72,13 @@ def run(vehicle_map):
         traci.simulationStep()
         # getting all detectors (induction loops) that are in the simulation
         det_list = traci.inductionloop.getIDList()
-        for id in det_list:
+        for det_id in det_list:
             # getting every vehicle that was seen by every detector in the step
-            det_vehs = traci.inductionloop.getLastStepVehicleIDs(id)
+            det_vehs = traci.inductionloop.getLastStepVehicleIDs(det_id)
             for veh in det_vehs:
-                # generating a transaction for every vehicle that was seen by any detector
-                # every transaction contains: id, which detector found the vehicle, the vehicle (agent) id, the trip id, at which time step the transaction took place
                 # check if detector is a E1 detector
-                if (id.startswith('e1det')):
-                    etree.SubElement(knowledges, "transaction", id=str(enumerator), detector=id, vehicle=vehicle_map[veh], trip=veh, time=str(step))
+                if (det_id.startswith('e1det')):
+                    etree.SubElement(knowledges, "transaction", id=str(enumerator), detector=det_id, vehicle=vehicle_map[veh], trip=veh, time=str(step))
                     enumerator += 1
 
         step += 1
@@ -89,6 +87,8 @@ def run(vehicle_map):
     # at this point those entries are detected
     # if you want to see/use every transaction, comment out lines 88-117
     bad_entries = []
+    added_ids = set()
+
     for i in tqdm(range(len(knowledges)-1),desc='Detecting bad entries'):
         testagainst_time = int(knowledges[i].get("time"))
         testagainst_detector = knowledges[i].get("detector")
@@ -99,8 +99,14 @@ def run(vehicle_map):
             # if this does not happen we have O(n²) with n being the number of transactions
             if (time > testagainst_time+1):
                 break
-            if (knowledges[j].get("detector") == testagainst_detector and knowledges[j].get("vehicle") == testagainst_vehicle and time-1 == testagainst_time):
-                bad_entries.append(knowledges[j])
+            if (knowledges[j].get("detector") == testagainst_detector and 
+                knowledges[j].get("vehicle") == testagainst_vehicle and 
+                time-1 == testagainst_time):
+                # Only add if we haven't added this specific element object yet
+                child_id = id(knowledges[j])
+                if child_id not in added_ids:
+                    bad_entries.append(knowledges[j])
+                    added_ids.add(child_id)
 
     # removing the detected bad entries
     def sortchildrenby(parent, attr):
@@ -108,13 +114,16 @@ def run(vehicle_map):
     def sortchildrenbyreverse(parent, attr):
         parent[:] = sorted(parent, key=lambda child: child.get(attr), reverse=True)
 
-    for i in tqdm(range(int(len(bad_entries)/2)), desc='Removing bad entries 1/2'):
-        knowledges.remove(bad_entries[i])
-        bad_entries.remove(bad_entries[i])
+    split_index = int(len(bad_entries) / 2)
+    bad_entries_part1 = bad_entries[:split_index]
+    bad_entries_part2 = bad_entries[split_index:]
+
+    for bad in tqdm(bad_entries_part1, desc='Removing bad entries 1/2'):
+        knowledges.remove(bad)
 
     sortchildrenbyreverse(root, 'id')
 
-    for bad in tqdm(bad_entries, desc='Removing bad entries 2/2'):
+    for bad in tqdm(bad_entries_part2, desc='Removing bad entries 2/2'):
         knowledges.remove(bad)
 
     sortchildrenby(root, 'id')
