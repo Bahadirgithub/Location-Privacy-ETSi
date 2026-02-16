@@ -396,13 +396,15 @@ def generate_Hashmap():
 
 # Gets command line arguments using the argparse module
 def get_options():
-    parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('-p', '--path', dest='rsc_path', type=str, help='Relative path to resource files', default='../rsc/')    
+    parser = argparse.ArgumentParser(description='Configuration parameters for the attack simulation')
     parser.add_argument('-k', '--knowledge', dest='input_file_name', type=str, help='Specify attacker knowledge to be used for attack', required=True)
     parser.add_argument('-o', '--output', dest='output_file_name', type=str, help='Set output xml file name', default='attacker_advanced.xml')
     parser.add_argument('-r', '--report', dest='report_name', type=str, help='Set report name', default='report.txt')
     parser.add_argument('-t', '--simulatedTimes', dest='simulated_times_input_file_name', type=str, help='Specify knowlege for the attacker with traveltimes', default='simulated-times.xml')
-    parser.add_argument('-n', '--simulatedAnnealing', dest='simulatedAnnealing', type=int, help='Number of interations', default='2')
+    parser.add_argument('-n', '--simulatedAnnealing', dest='simulatedAnnealing', type=int, help='Number of interations', default=2)
+    parser.add_argument('-trip', '--tripGenerations', dest='generations_trips', type=int, help='Number of generations for trip reconstruction (genetic algorithm)', default=12000)
+    parser.add_argument('-wallet', '--walletGenerations', dest='generations_wallets', type=int, help='Number of generations for wallet assignment (genetic algorithm)', default=20000)
+    parser.add_argument('-pop', '--populationSize', dest='population_size', type=int, help='Population size for the genetic algorithm', default=500)
     return parser.parse_args()
 
 # Write report file
@@ -514,14 +516,9 @@ def main():
         rust_sim_times.append(t_obj)
         existing_routes.add((u, v))
 
-    # Genetische Funktion:
-    GENERATIONS_TRIPS = 12000 #6000
-    GENERATIONS_WALLETS = 20000 #12000
-    POPULATION_SIZE = 500
-
     # Angenommen, Sie haben 5 Trips und 3 Wallets. Individuum A = [0, 1, 0, 2, 1]
     # -> Bedeutung Trip 0 ist in Wallet 0, Trip 1 ist in Wallet 1, Trip 2 ist in Wallet 0 etc.
-    (population_wallets, population_trips) = genetic.main(GENERATIONS_TRIPS, GENERATIONS_WALLETS, 0.1, 0.05, POPULATION_SIZE, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
+    (population_wallets, population_trips) = genetic.main(generations_trips, generations_wallets, 0.1, 0.05, population_size, sorted(walletCosts), rust_inital_pop, rust_transactions, rust_sim_times)
 
     print("Reconstructing results...")
 
@@ -579,12 +576,14 @@ if __name__ == '__main__':
 
     # Copy args.arguments to ‘regular’ arguments
     args = get_options()
-    rsc_path = args.rsc_path
     input_file_name = args.input_file_name
     annealing = args.simulatedAnnealing
     simulated_times_file = args.simulated_times_input_file_name
     output_file_name = args.output_file_name
     rep_name = args.report_name
+    generations_trips = args.generations_trips
+    generations_wallets = args.generations_wallets
+    population_size = args.population_size
     
 
     # Global report variables
