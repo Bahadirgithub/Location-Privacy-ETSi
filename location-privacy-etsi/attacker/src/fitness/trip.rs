@@ -17,17 +17,30 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    //Gefundene Parameter
-    const TRIP_LEN_EXP: f64 = 0.63;
-    const TRIP_LEN_MULT: f64 = 58.25;
-    const SHORT_TRIP_PENALTY: f64 = 10256.21;
-    const TIMETRAVEL_PENALTY: f64 = 107127.79;
-    const TELEPORTATION_PENALTY: f64 = 81475.05;
-    const ACTIVE_TRIPS_PENALTY: f64 = 330.0; //WIP
-    const SIM_DATA_PENALTY: f64 = 182.65;
+    //Gefundene Parameter: Spider
+    const TRIP_LEN_EXP: f64 = 0.79;
+    const TRIP_LEN_MULT: f64 = 339.2;
+    const SHORT_TRIP_PENALTY: f64 = 9863.8;
+    const TIMETRAVEL_PENALTY: f64 = 91318.7;
+    const TELEPORTATION_PENALTY: f64 = 66647.9;
+    const ACTIVE_TRIPS_PENALTY: f64 = 339.5;
+    const SIM_DATA_PENALTY: f64 = 229.0;
 
-    const PERFECT_TIME_BONUS: f64 = 863.82;
-    const DETECTOR_MATCH_BONUS: f64 = 2000.0; //WIP
+    const PERFECT_TIME_BONUS: f64 = 967.45;
+    const DETECTOR_MATCH_BONUS: f64 = 2085.6;
+
+    /*Gefundene Parameter: Ingolstadt
+    const TRIP_LEN_EXP: f64 = 0.79;
+    const TRIP_LEN_MULT: f64 = 109.9;
+    const SHORT_TRIP_PENALTY: f64 = 10528.5;
+    const TIMETRAVEL_PENALTY: f64 = 90261.5;
+    const TELEPORTATION_PENALTY: f64 = 79404.8;
+    const ACTIVE_TRIPS_PENALTY: f64 = 353.6;
+    const SIM_DATA_PENALTY: f64 = 243.3;
+
+    const PERFECT_TIME_BONUS: f64 = 909.1;
+    const DETECTOR_MATCH_BONUS: f64 = 5211.1;
+    */
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
