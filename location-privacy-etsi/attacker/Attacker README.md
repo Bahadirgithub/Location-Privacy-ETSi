@@ -1,115 +1,128 @@
 ## Attacker - Traffic Deanonymization
-Dieses Repository enthält das `Attacker-Modul`, das darauf abzielt, anonymisierte Transaktionsdaten (z. B. von Mautbrücken) zu rekonstruieren. Das Ziel ist es, Fahrzeugrouten (Trips) wiederherzustellen und die Zugehörigkeit zu bestimmten Wallets (Fahrzeugen) zu ermitteln.
 
-#### Das Projekt nutzt eine hybride Architektur:
+This repository contains the **Attacker** module, which aims to reconstruct anonymized transaction data (e.g., from toll gantries). The objective is to recover vehicle routes (trips) and determine their association with specific wallets (vehicles).
 
-**Python:** Für Datenparsing, Graphen-Erstellung und Orchestrierung.
+#### Hybrid Architecture
 
-**Rust:** Für performance-kritische Berechnungen *(genetischer Algorithmus)*
-#### Projektstruktur:
-``` text
+The project uses a hybrid architecture:
+
+- **Python:** Data parsing, graph construction, and orchestration
+- **Rust:** Performance-critical computations *(genetic algorithm)*
+
+#### Project Structure
+
+```text
 attacker/
-├── attacks/            # Output: Generierte XML-Dateien mit den rekonstruierten Angriffen
-├── reports/            # Output: Textberichte mit Metriken (Laufzeit, Erfolgsrate)
-├── src/                # Rust Source Code (lib.rs) für die genetischen Algorithmen
-├── attack_random.py      # Baseline: Zufällige Zuweisung
-├── attack_advanced.py    # Heuristik: Graphen & Simulated Annealing
-├── attack_genetic.py     # High-Performance: Genetischer Algorithmus (Rust)
-├── Cargo.toml            # Rust Konfiguration
-├── pyproject.toml        # Build-Konfiguration für Python/Rust-Binding
-├── sumo/               # Input: Simulationsdaten aus SUMO
-│   ├── attacker.xml          # Das "Wissen" des Angreifers (Transaktionen)
-│   ├── challenger.xml        # Ground Truth (zur Validierung/Lösung)
-│   └── simulated-times.xml   # Generierte statistische Reisezeiten
-└── utils/              # Skripte zur Ausführung der Angriffe
-    └── simulateTime.py       # Tool zur Generierung der Reisezeiten-Statistik
-```
+├── attacks/            # Output: Generated XML files containing reconstructed attacks
+├── reports/            # Output: Text reports with metrics (runtime, success rate)
+├── src/                # Rust source code (lib.rs) for genetic algorithms
+├── attack_random.py    # Baseline: Random assignment
+├── attack_advanced.py  # Heuristic: Graph-based & Simulated Annealing
+├── attack_genetic.py   # High-performance: Genetic algorithm (Rust)
+├── Cargo.toml          # Rust configuration
+├── pyproject.toml      # Build configuration for Python/Rust bindings
+├── sumo/               # Input: Simulation data from SUMO
+│   ├── attacker.xml        # The attacker's knowledge (transactions)
+│   ├── challenger.xml      # Ground truth (for validation/reference)
+│   └── simulated-times.xml # Generated statistical travel times
+└── utils/              # Scripts to execute attacks
+    └── simulateTime.py     # Tool for generating travel time statistics
+``` 
 
-# Attacker – Rekonstruktion von Fahrten mittels Genetischem Algorithmus
+# Attacker – Reconstruction of Trips Using a Genetic Algorithm
 
-## Überblick
+## Overview
+The `attacker` branch implements a genetic algorithm to reconstruct complete trips from fragmented transaction data (e.g., detector timestamps).
 
-Der attacker-Branch implementiert einen genetischen Algorithmus, um aus fragmentierten Transaktionsdaten (z. B. Detektor-Zeitstempel) vollständige Fahrten zu rekonstruieren.
-
-Ziel ist es:
-- einzelne Transaktionen zu Trips zu gruppieren
-- Trips Fahrzeugen (Wallets) zuzuordnen
-
----
-
-## Vorgehen
-
-Der Angriff erfolgt in zwei Phasen:
-
-1. *Trip-Rekonstruktion*  
-   Gruppierung von Transaktionen zu plausiblen Fahrten
-
-2. *Wallet-Zuordnung*  
-   Zuordnung der Fahrten zu einzelnen Fahrzeugen
+The goal is to:
+- group individual transactions into trips
+- assign trips to vehicles (wallet)
 
 ---
 
-## Fitness-Funktion (Kernlogik)
+## Approach
+The attack is performed in two phases:
+1. **Trip Reconstruction**
 
-Die Bewertung basiert auf Boni und Strafen:
+   Grouping Transactions into plausible trips
+2. **Wallet Assignment**
 
-### Boni
-- *Korrektes Timing (PERFECT_TIME_BONUS)*  
-  Belohnung für realistische Zeitabstände zwischen Detektoren
-
-- *Trip-Länge (TRIP_LEN_MULT)*  
-  Längere, konsistente Trips werden bevorzugt
-
-### Strafen
-- *Short Trips (SHORT_TRIP_PENALTY)*  
-  Verhindert unrealistisch kurze Fahrten
-
-- *Zeitreisen (TIMETRAVEL_PENALTY)*  
-  Harte Strafe für negative Zeitdifferenzen
-
-- *Teleportation (TELEPORTATION_PENALTY)*  
-  Bestraft unmögliche Ortswechsel
-
-- *Zu viele Trips (ACTIVE_TRIPS_PENALTY)*  
-  Verhindert übermäßige Fragmentierung
+   Assigning trips to individual vehicles
 
 ---
 
-## Zentrale Erkenntnisse (Analyse)
+## Genetic Algorithm
 
-### Ingolstadt (realistisch)
-- Benötigt *starke Strafen*, um Rauschen zu filtern
-- Wichtige Parameter:
-  - hohe Short-Trip-Strafen
-  - hohe Struktur-Boni
-- Grund: reale Daten sind unregelmäßig und fehleranfällig
+The GA operates iteratively on a population of candidate solutions (individuals). In each generation:
 
-### Spider (synthetisch)
-- Profitiert von *präzisem Timing statt Strenge*
-- Wichtige Parameter:
-  - hoher PERFECT_TIME_BONUS
-  - geringere Strafen
-- Grund: saubere, gleichmäßige Netzstruktur
+- **Selection:** High-quality solutions are preferentially selected
+
+- **Mutation:** Genomes are randomly modified (small and large changes) to generate new candidate solutions
+
+- **Evolution:** A new population is formed from mutated offspring, typically combined with elitism (best individuals are preserved)
 
 ---
 
-## Unterschied der Szenarien
+## Fitness Function (Core Logic)
 
-| Eigenschaft        | Ingolstadt              | Spider                  |
-|------------------|------------------------|--------------------------|
-| Datenqualität     | verrauscht, real       | sauber, synthetisch      |
-| Struktur          | unregelmäßig           | regelmäßig               |
-| Optimale Strategie| Strenge & Filterung    | Timing & Präzision       |
+Evaluation is based on rewards and penalties:
+
+## Rewards
+
+- **Correct Timing (`PERFECT_TIME_BONUS`)**
+
+  Rewards realistic time differences between detectors
+
+- **Trip Length (`TRIP_LEN_MULT`)**
+
+  Prefers longer, consistent trips
+
+## Penalties
+
+- **Short Trips (`SHORT_TRIP_PENALTY`)**
+
+  Prevents unrealistically short trips
+
+- **Time Travel (`TIMETRAVEL_PENALTY`)**
+
+  Strong penalty for negative time differences
+
+- **Teleportation (`TELEPORTATION_PENALTY`)**
+
+  Penalizes impossible spatial transitions
+
+- **Too Many Trips (`ACTIVE_TRIPS_PENALTY`)**
+
+  Prevents excessive fragmentation
 
 ---
 
-## Implikation für Anonymisierung
+## Key Insights (Analysis)
+### Ingolstadt (realistic scenario)
+- Requires **strong penalties** to filter noise
+- Important parameters:
+  - high `SHORT_TRIP_PENALTIES`
 
-Ein System ist schwer angreifbar, wenn:
+  - strong structural rewards
 
-- *keine klaren Start-/Endpunkte erkennbar sind*
-- *Zeitstempel ungenau sind*
-- *mehrere plausible Routen existieren*
-- *Rauschen nicht eindeutig filterbar ist*
+- Reason: real-world data is irregular and error-prone
 
-→ Ziel: Suchraum für den Angreifer maximieren, sodass der GA nicht konvergiert.
+### Spider (synthetic scenario)
+- Benefits from **precise timing rather than strict penalties**
+- Important parameters:
+  - high `PERFECT_TIME_BONUS`
+  - lower penalties
+
+- Reason: clean and regularly structured network
+
+--- 
+
+## Implications for Anonymization
+A system becomes difficult to attack when:
+
+- no clear start/end points are identifiable
+- timestamps are imprecise
+- multiple plausible routes exist
+- noise cannot be reliably filtered
+
+→ Goal: maximize the attacker’s search space so that the GA cannot converge effectively.
