@@ -17,7 +17,7 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
     let mut penalty: f64 = 0.0;
     let mut bonus: f64 = 0.0;
 
-    //Gefundene Parameter: Spider
+    /*Gefundene Parameter: Spider
     const TRIP_LEN_EXP: f64 = 0.79;
     const TRIP_LEN_MULT: f64 = 339.2;
     const SHORT_TRIP_PENALTY: f64 = 9863.8;
@@ -28,8 +28,9 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
     const PERFECT_TIME_BONUS: f64 = 967.45;
     const DETECTOR_MATCH_BONUS: f64 = 2085.6;
+    */
 
-    /*Gefundene Parameter: Ingolstadt
+    //Gefundene Parameter: Ingolstadt
     const TRIP_LEN_EXP: f64 = 0.79;
     const TRIP_LEN_MULT: f64 = 109.9;
     const SHORT_TRIP_PENALTY: f64 = 10528.5;
@@ -40,7 +41,6 @@ pub fn fitness_trip(individual: &[u32],  transactions: &[Transaction], simulated
 
     const PERFECT_TIME_BONUS: f64 = 909.1;
     const DETECTOR_MATCH_BONUS: f64 = 5211.1;
-    */
 
     for (trans_id, trip_id) in individual.iter().enumerate() {
         trips[*trip_id as usize].push(&transactions[trans_id]); //Trip Liste befüllen
